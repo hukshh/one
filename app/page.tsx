@@ -1,67 +1,129 @@
-import { FileAudio, FileVideo, Plus, Search, Calendar, Users, CheckCircle2 } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { FileAudio, FileVideo, Plus, Search, Calendar, Users, CheckCircle2, Loader2, Play } from "lucide-react";
+
+const API_URL = "http://localhost:4000/api";
+const WORKSPACE_ID = "69ea5c6ced5550131e0e66db";
+const USER_ID = "69ea5c6ced5550131e0e66dc";
 
 export default function Home() {
+  const [meetings, setMeetings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fetchMeetings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/meetings`, {
+        headers: {
+          "x-workspace-id": WORKSPACE_ID,
+          "x-user-id": USER_ID,
+        },
+      });
+      const data = await response.json();
+      setMeetings(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to fetch meetings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMeetings();
+    const interval = setInterval(fetchMeetings, 5000); // Poll every 5s
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleUploadTest = async () => {
+    setIsUploading(true);
+    try {
+      await fetch(`${API_URL}/meetings/upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-workspace-id": WORKSPACE_ID,
+          "x-user-id": USER_ID,
+        },
+        body: JSON.stringify({
+          title: `Sync - ${new Date().toLocaleTimeString()}`,
+          workspaceId: WORKSPACE_ID,
+          creatorId: USER_ID,
+          fileUrl: "https://pub-841804365313437198d009b0.r2.dev/sample-meeting.mp4",
+        }),
+      });
+      fetchMeetings();
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Workspace Intelligence</h1>
-          <p className="text-slate-400">Manage and analyze your team's meeting memory.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Meeting Memory</h1>
+          <p className="text-slate-400">Real-time intelligence from your team's conversations.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold transition-all">
-            <Plus className="h-4 w-4" />
+          <button 
+            onClick={handleUploadTest}
+            disabled={isUploading}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg font-semibold transition-all shadow-lg shadow-indigo-500/20"
+          >
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             New Meeting
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <StatCard title="Total Meetings" value="128" change="+12%" icon={<FileVideo className="text-indigo-400" />} />
-        <StatCard title="Hours Analyzed" value="42.5" change="+5.2%" icon={<Calendar className="text-emerald-400" />} />
-        <StatCard title="Action Items" value="342" change="+18.4%" icon={<CheckCircle2 className="text-amber-400" />} />
-        <StatCard title="Participants" value="84" change="+2.1%" icon={<Users className="text-rose-400" />} />
+        <StatCard title="Total Meetings" value={meetings.length.toString()} change="+100%" icon={<FileVideo className="text-indigo-400" />} />
+        <StatCard title="Hours Analyzed" value={(meetings.length * 0.5).toFixed(1)} change="+100%" icon={<Calendar className="text-emerald-400" />} />
+        <StatCard title="Processed" value={meetings.filter(m => m.status === 'PROCESSED').length.toString()} change="+100%" icon={<CheckCircle2 className="text-amber-400" />} />
+        <StatCard title="Workspaces" value="1" change="0%" icon={<Users className="text-rose-400" />} />
       </div>
 
-      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-semibold">Recent Meetings</h2>
+          <h2 className="text-xl font-semibold">Intelligence Feed</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
             <input 
               type="text" 
-              placeholder="Search transcript, title, or tags..." 
+              placeholder="Search meeting memory..." 
               className="pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64"
             />
           </div>
         </div>
 
-        <div className="space-y-4">
-          <MeetingRow 
-            title="Q3 Product Roadmap Sync" 
-            date="2 hours ago" 
-            status="Processed" 
-            type="video" 
-            participants={4} 
-            summary="Discussion on feature prioritization and engineering bandwidth for the upcoming quarter."
-          />
-          <MeetingRow 
-            title="Design System Review" 
-            date="Yesterday" 
-            status="Processed" 
-            type="video" 
-            participants={3} 
-            summary="Refining the color tokens and typography for the MeetingMind dashboard overhaul."
-          />
-          <MeetingRow 
-            title="Weekly Engineering Standup" 
-            date="Apr 21, 2026" 
-            status="Transcribing" 
-            type="audio" 
-            participants={8} 
-            summary="Quick updates on current sprints and blocker identification."
-          />
-        </div>
+        {loading && meetings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <Loader2 className="h-8 w-8 animate-spin mb-4" />
+            <p>Connecting to database...</p>
+          </div>
+        ) : meetings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
+            <Play className="h-12 w-12 mb-4 opacity-20" />
+            <p>No meetings found. Upload one to start!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {meetings.map((meeting) => (
+              <MeetingRow 
+                key={meeting.id}
+                id={meeting.id}
+                title={meeting.title} 
+                date={new Date(meeting.createdAt).toLocaleDateString()} 
+                status={meeting.status} 
+                type="video" 
+                summary={meeting.summary?.short || "Processing intelligence..."}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -79,32 +141,37 @@ function StatCard({ title, value, change, icon }: { title: string, value: string
         </span>
       </div>
       <p className="text-sm text-slate-400 mb-1">{title}</p>
-      <h3 className="text-2xl font-bold">{value}</h3>
+      <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
     </div>
   );
 }
 
-function MeetingRow({ title, date, status, type, participants, summary }: any) {
-  const isProcessed = status === "Processed";
+function MeetingRow({ id, title, date, status, type, summary }: any) {
+  const isProcessed = status === "PROCESSED";
+  const isFailed = status === "FAILED";
   
   return (
-    <div className="group flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/30 transition-colors border border-transparent hover:border-slate-700/50 cursor-pointer">
+    <div className="group flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/30 transition-all border border-transparent hover:border-slate-700/50 cursor-pointer">
       <div className={`mt-1 p-3 rounded-xl ${type === 'video' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-400'}`}>
         {type === 'video' ? <FileVideo className="h-5 w-5" /> : <FileAudio className="h-5 w-5" />}
       </div>
       <div className="flex-1">
         <div className="flex items-center justify-between mb-1">
-          <h4 className="font-semibold text-slate-200 group-hover:text-white">{title}</h4>
+          <h4 className="font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">{title}</h4>
           <span className="text-xs text-slate-500">{date}</span>
         </div>
         <p className="text-sm text-slate-400 line-clamp-1 mb-2">{summary}</p>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Users className="h-3.5 w-3.5" />
-            {participants} participants
-          </div>
-          <div className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${isProcessed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400 animate-pulse'}`}>
-            <div className={`h-1.5 w-1.5 rounded-full ${isProcessed ? 'bg-emerald-400' : 'bg-blue-400'}`} />
+          <div className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${
+            isProcessed ? 'bg-emerald-500/10 text-emerald-400' : 
+            isFailed ? 'bg-rose-500/10 text-rose-400' :
+            'bg-indigo-500/10 text-indigo-400 animate-pulse'
+          }`}>
+            <div className={`h-1.5 w-1.5 rounded-full ${
+              isProcessed ? 'bg-emerald-400' : 
+              isFailed ? 'bg-rose-400' :
+              'bg-indigo-400'
+            }`} />
             {status}
           </div>
         </div>
@@ -112,3 +179,4 @@ function MeetingRow({ title, date, status, type, participants, summary }: any) {
     </div>
   );
 }
+
