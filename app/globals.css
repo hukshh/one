@@ -1,28 +1,29 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
+@theme {
+  --color-background: hsl(240 10% 3.9%);
+  --color-foreground: hsl(0 0% 98%);
+}
+
+@layer base {
+  * {
+    border-color: #1e293b; /* slate-800 */
+  }
 }
 
 body {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
+  color: var(--color-foreground);
+  background: var(--color-background);
   background-image: 
     radial-gradient(at 0% 0%, hsla(263, 70%, 50%, 0.05) 0px, transparent 50%),
     radial-gradient(at 100% 0%, hsla(220, 70%, 50%, 0.05) 0px, transparent 50%);
 }
 
-@layer base {
-  * {
-    @apply border-slate-800;
-  }
-}
-
 .glass {
-  @apply bg-slate-950/80 backdrop-blur-md border border-slate-800/50;
+  background-color: rgba(2, 6, 23, 0.8); /* slate-950/80 */
+  backdrop-filter: blur(12px);
+  border-width: 1px;
+  border-color: rgba(30, 41, 59, 0.5); /* slate-800/50 */
 }
 
 .premium-gradient {
@@ -30,5 +31,8 @@ body {
 }
 
 .text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to bottom right, #ffffff, #94a3b8);
 }
