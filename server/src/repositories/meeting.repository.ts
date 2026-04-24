@@ -1,0 +1,120 @@
+import { PrismaClient, Meeting, MeetingStatus } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export class MeetingRepository {
+  async create(data: {
+    title: string;
+    workspaceId: string;
+    creatorId: string;
+    videoUrl?: string;
+    audioUrl?: string;
+  }): Promise<Meeting> {
+    return prisma.meeting.create({
+      data: {
+        ...data,
+        status: MeetingStatus.UPLOADED,
+      },
+    });
+  }
+
+  async findById(id: string): Promise<Meeting | null> {
+    return prisma.meeting.findUnique({
+      where: { id },
+      include: {
+        participants: true,
+        transcript: true,
+        summary: true,
+        actionItems: true,
+        decisions: true,
+        risks: true,
+      },
+    });
+  }
+
+  async findByWorkspaceId(workspaceId: string): Promise<Meeting[]> {
+    return prisma.meeting.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        summary: true,
+      }
+    });
+  }
+
+  async updateStatus(id: string, status: MeetingStatus): Promise<Meeting> {
+    return prisma.meeting.update({
+      where: { id },
+      data: { status },
+    });
+  }
+
+  async update(id: string, data: any): Promise<Meeting> {
+    return prisma.meeting.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async saveTranscript(meetingId: string, segments: any[]): Promise<void> {
+    const safeSegments = segments.map(s => ({
+      meetingId,
+      startTime: Number(s.startTime || s.start) || 0,
+      endTime: Number(s.endTime || s.end) || 0,
+      speakerLabel: s.speakerLabel || s.speaker || 'Speaker',
+      content: s.content || s.text || '',
+      confidence: Number(s.confidence) || 0.9
+    }));
+
+    await prisma.transcriptSegment.createMany({
+      data: safeSegments
+    });
+  }
+
+
+  async saveIntelligence(meetingId: string, intelligence: any): Promise<void> {
+    const { summary_short, summary_detailed, action_items, decisions, risks } = intelligence;
+    
+    await prisma.$transaction([
+      prisma.summary.create({
+        data: {
+          meetingId,
+          short: summary_short,
+          detailed: summary_detailed,
+        }
+      }),
+      prisma.actionItem.createMany({
+        data: action_items.map((item: any) => {
+          const d = item.deadline ? new Date(item.deadline) : null;
+          const isValidDate = d instanceof Date && !isNaN(d.getTime());
+          return {
+            meetingId,
+            task: item.task || 'No description provided',
+            owner: item.owner || 'Unknown',
+            priority: ['LOW', 'MEDIUM', 'HIGH'].includes(String(item.priority).toUpperCase()) 
+              ? (String(item.priority).toUpperCase() as any) 
+              : 'MEDIUM',
+            deadline: isValidDate ? d : null
+          };
+        })
+      }),
+      prisma.decision.createMany({
+        data: decisions.map((d: any) => ({
+          meetingId,
+          content: typeof d === 'string' ? d : JSON.stringify(d)
+        }))
+      }),
+      prisma.risk.createMany({
+        data: risks.map((r: any) => ({
+          meetingId,
+          content: r.risk || 'No description provided',
+          severity: ['LOW', 'MEDIUM', 'HIGH'].includes(String(r.severity).toUpperCase()) 
+            ? (String(r.severity).toUpperCase() as any) 
+            : 'MEDIUM'
+        }))
+      })
+    ]);
+  }
+}
+
+export const meetingRepository = new MeetingRepository();

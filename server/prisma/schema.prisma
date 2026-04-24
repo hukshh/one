@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  plan      String   @default("free") // free, pro, enterprise
+  users     User[]
+  meetings  Meeting[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  email         String    @unique
+  fullName      String?
+  role          String    @default("member") // owner, admin, member
+  workspaceId   String    @db.ObjectId
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  meetings      Meeting[] @relation("CreatedMeetings")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Meeting {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+  title             String
+  description       String?
+  status            MeetingStatus       @default(UPLOADED)
+  videoUrl          String?
+  audioUrl          String?
+  duration          Float?
+  workspaceId       String              @db.ObjectId
+  workspace         Workspace           @relation(fields: [workspaceId], references: [id])
+  creatorId         String              @db.ObjectId
+  creator           User                @relation("CreatedMeetings", fields: [creatorId], references: [id])
+  participants      Participant[]
+  transcript        TranscriptSegment[]
+  summary           Summary?
+  actionItems       ActionItem[]
+  decisions         Decision[]
+  risks             Risk[]
+  jobRuns           JobRun[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([workspaceId])
+  @@index([status])
+}
+
+enum MeetingStatus {
+  UPLOADED
+  QUEUED
+  TRANSCRIBING
+  TRANSCRIBED
+  EXTRACTING
+  PROCESSED
+  FAILED
+}
+
+model Participant {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  name      String?
+  meetingId String  @db.ObjectId
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, email])
+}
+
+model TranscriptSegment {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId    String  @db.ObjectId
+  meeting      Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  startTime    Float
+  endTime      Float
+  speakerLabel String?
+  content      String
+  confidence   Float?
+
+  @@index([meetingId])
+}
+
+model Summary {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId   String  @unique @db.ObjectId
+  meeting     Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  short       String
+  detailed    String
+  keyPoints   String?
+}
+
+model ActionItem {
+  id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId  String           @db.ObjectId
+  meeting    Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  task       String
+  owner      String?
+  priority   Priority         @default(MEDIUM)
+  status     ActionItemStatus @default(OPEN)
+  deadline   DateTime?
+  confidence Float?
+
+  @@index([meetingId])
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ActionItemStatus {
+  OPEN
+  COMPLETED
+}
+
+model Decision {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId  String  @db.ObjectId
+  meeting    Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  content    String
+  confidence Float?
+
+  @@index([meetingId])
+}
+
+model Risk {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId  String   @db.ObjectId
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  content    String
+  severity   Priority @default(MEDIUM)
+  confidence Float?
+
+  @@index([meetingId])
+}
+
+model JobRun {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId String    @db.ObjectId
+  meeting   Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  jobType   String    // TRANSCRIPTION, EXTRACTION
+  status    JobStatus @default(PENDING)
+  attempts  Int       @default(0)
+  error     String?
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([meetingId])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
