@@ -1,4 +1,6 @@
 import app from './app';
+import './jobs/meeting.worker'; // Initialize worker
+
 const PORT = Number(process.env.PORT) || 4000;
 
 const startServer = async () => {

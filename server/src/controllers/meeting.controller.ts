@@ -28,87 +28,17 @@ export class MeetingController {
         videoUrl: fileUrl,
       });
 
-      // Process meeting in background without Redis queue
-      this.processMeetingInBackground(meeting.id, fileUrl);
+      // Add to background processing queue
+      const { QueueService } = await import('../services/queue.service');
+      await QueueService.addMeetingJob(meeting.id, fileUrl);
 
       res.status(201).json({
-        message: 'Meeting uploaded and processing started',
+        message: 'Meeting uploaded and processing queued',
         meetingId: meeting.id,
       });
     } catch (error) {
       console.error('Upload error details:', error);
       res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  // Simplified background processing without Redis
-  private async processMeetingInBackground(meetingId: string, fileUrl: string) {
-    const logFile = path.join(process.cwd(), 'error.log');
-    fs.appendFileSync(logFile, `🎬 [${new Date().toISOString()}] Starting process for ${meetingId}\n`);
-    
-    console.log(`🎬 [${meetingId}] Starting background processing...`);
-    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-    try {
-
-      // 1. Transcribe
-      console.log(`🔄 [${meetingId}] Step 1: Transcribing audio...`);
-      await meetingRepository.updateStatus(meetingId, MeetingStatus.TRANSCRIBING);
-      const segments = await aiService.transcribe(fileUrl);
-      
-      if (!segments || segments.length === 0) {
-        throw new Error('Transcription failed: No segments returned');
-      }
-
-      console.log(`✅ [${meetingId}] Transcribed ${segments.length} segments. Saving...`);
-      await meetingRepository.saveTranscript(meetingId, segments);
-      
-      const lastSegment = segments[segments.length - 1];
-      const durationSeconds = lastSegment.endTime || 0;
-      const durationMinutes = Math.ceil(durationSeconds / 60);
-      await meetingRepository.update(meetingId, { duration: durationMinutes });
-      
-      await meetingRepository.updateStatus(meetingId, MeetingStatus.TRANSCRIBED);
-      
-      await sleep(2000); // Give Groq a break
-
-      // 2. Extract Intelligence
-      console.log(`🔄 [${meetingId}] Step 2: Extracting Intelligence...`);
-      await meetingRepository.updateStatus(meetingId, MeetingStatus.EXTRACTING);
-      
-      const transcript = segments.map(s => s.content).join(' ');
-      
-      console.log(`🤖 [${meetingId}] Normalizing transcript...`);
-      const cleanTranscript = await aiService.normalizeTranscript(transcript);
-      await sleep(2000); // Give Groq a break
-      
-      console.log(`🤖 [${meetingId}] Extracting structured data...`);
-      const intelligence = await aiService.extractFromChunk(cleanTranscript);
-      await sleep(2000); // Give Groq a break
-      
-      console.log(`🤖 [${meetingId}] Synthesizing final report...`);
-      const finalIntelligence = await aiService.synthesize([intelligence]);
-      console.log(`✅ [${meetingId}] Intelligence extraction complete.`);
-
-      // 3. Save
-      console.log(`🔄 [${meetingId}] Step 3: Saving final report...`);
-      await meetingRepository.saveIntelligence(meetingId, finalIntelligence);
-      await meetingRepository.updateStatus(meetingId, MeetingStatus.PROCESSED);
-
-      console.log(`🎉 [${meetingId}] SUCCESS: Meeting processed completely.`);
-    } catch (error: any) {
-      console.error(`❌ [${meetingId}] PIPELINE ERROR:`, error.message);
-      
-      // Write error to a local file for debugging
-      const errorLog = `[${new Date().toISOString()}] Meeting: ${meetingId} | Error: ${error.message}\n${error.stack}\n\n`;
-      fs.appendFileSync(path.join(process.cwd(), 'error.log'), errorLog);
-
-      try {
-        const { MeetingStatus } = await import('@prisma/client');
-        await meetingRepository.updateStatus(meetingId, MeetingStatus.FAILED);
-      } catch (dbError) {
-        console.error(`[${meetingId}] Failed to set status to FAILED:`, dbError);
-      }
     }
   }
 

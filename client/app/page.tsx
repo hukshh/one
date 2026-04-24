@@ -2,19 +2,26 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { FileAudio, FileVideo, Plus, Search, Calendar, Users, CheckCircle2, Loader2, Play } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-const WORKSPACE_ID = "69ea5c6ced5550131e0e66db";
-const USER_ID = "69ea5c6ced5550131e0e66dc";
 
 export default function Home() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Derived IDs from session
+  const USER_ID = session?.user?.id;
+  // @ts-ignore
+  const WORKSPACE_ID = session?.user?.workspaceId;
+
   const fetchMeetings = async () => {
+    if (!WORKSPACE_ID || !USER_ID) return;
+    
     try {
       const response = await fetch(`${API_URL}/meetings`, {
         headers: {
@@ -32,14 +39,16 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchMeetings();
-    const interval = setInterval(fetchMeetings, 5000); // Poll every 5s
-    return () => clearInterval(interval);
-  }, []);
+    if (status === "authenticated") {
+      fetchMeetings();
+      const interval = setInterval(fetchMeetings, 5000); // Poll every 5s
+      return () => clearInterval(interval);
+    }
+  }, [status, WORKSPACE_ID, USER_ID]);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !WORKSPACE_ID || !USER_ID) return;
 
     setIsUploading(true);
     const formData = new FormData();
@@ -70,6 +79,15 @@ export default function Home() {
       event.target.value = '';
     }
   };
+
+  if (status === "loading") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
+        <Loader2 className="h-10 w-10 animate-spin mb-4" />
+        <p className="text-lg">Loading session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-10">

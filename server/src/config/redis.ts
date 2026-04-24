@@ -7,20 +7,30 @@ const redisConfig = {
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   maxRetriesPerRequest: null,
+  retryStrategy: (times: number) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
 };
 
 export const redisConnection = process.env.MOCK_SERVICES === 'true' 
   ? null as any 
   : new Redis(redisConfig);
 
+export let isRedisConnected = false;
+
 if (redisConnection) {
   redisConnection.on('error', (err: any) => {
-    console.error('Redis connection error:', err);
+    isRedisConnected = false;
+    if (err.code === 'ECONNREFUSED') {
+      // Silent in logs, but status is updated
+    } else {
+      console.error('Redis connection error:', err);
+    }
   });
 
   redisConnection.on('connect', () => {
+    isRedisConnected = true;
     console.log('✅ Connected to Redis');
   });
-} else {
-  console.log('⚠️ Running in MOCK MODE - Redis connection skipped');
 }
