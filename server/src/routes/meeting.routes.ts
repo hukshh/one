@@ -25,5 +25,6 @@ router.use(authMiddleware);
 router.post('/upload', upload.single('file'), meetingController.upload);
 router.get('/', meetingController.list);
 router.get('/:id', meetingController.getById);
+router.get('/:id/export/pdf', meetingController.exportPdf);
 
 export default router;

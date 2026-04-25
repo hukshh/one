@@ -13,9 +13,8 @@ const redisConfig = {
   },
 };
 
-export const redisConnection = process.env.MOCK_SERVICES === 'true' 
-  ? null as any 
-  : new Redis(redisConfig);
+// Disabled Redis for clean logs
+export const redisConnection = null as any; 
 
 export let isRedisConnected = false;
 

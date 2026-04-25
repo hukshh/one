@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { meetingRepository } from '../repositories/meeting.repository';
 import { aiService } from '../services/ai.service';
+import { ExportService } from '../services/export.service';
 import { MeetingStatus } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
@@ -67,6 +68,20 @@ export class MeetingController {
     } catch (error: any) {
       console.error('❌ List meetings error:', error.message);
       res.status(500).json({ error: 'Database connection error', details: error.message });
+    }
+  }
+
+  exportPdf = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const pdfBuffer = await ExportService.generateMeetingPDF(id);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=MeetingReport-${id}.pdf`);
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      console.error('❌ Export PDF error:', error.message);
+      res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
     }
   }
 }

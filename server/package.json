@@ -25,7 +25,9 @@
     "ioredis": "^5.10.1",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.6",
     "openai": "^6.34.0",
+    "pdfkit": "^0.18.0",
     "prisma": "^6.19.3",
     "zod": "^4.3.6"
   },
@@ -35,6 +37,8 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.6.0",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pdfkit": "^0.17.6",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.3"
   }

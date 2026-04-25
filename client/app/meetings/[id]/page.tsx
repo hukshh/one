@@ -77,6 +77,17 @@ export default function MeetingDetail() {
     );
   }
 
+  const handleExport = async () => {
+    if (!WORKSPACE_ID || !USER_ID || !id) return;
+    
+    try {
+      window.open(`${API_URL}/meetings/${id}/export/pdf?workspaceId=${WORKSPACE_ID}&userId=${USER_ID}`, '_blank');
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to export PDF report.");
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <button 
@@ -103,7 +114,7 @@ export default function MeetingDetail() {
                 </span>
                 <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {meeting.duration || '0:00'} min</span>
                 <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${
-                  meeting.status === "PROCESSED" ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'
+                   meeting.status === "PROCESSED" ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'
                 }`}>
                   {meeting.status}
                 </span>
@@ -111,7 +122,10 @@ export default function MeetingDetail() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-all">
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-all"
+            >
               <Download className="h-4 w-4" />
               Export
             </button>

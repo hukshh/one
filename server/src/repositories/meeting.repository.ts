@@ -28,6 +28,7 @@ export class MeetingRepository {
         actionItems: true,
         decisions: true,
         risks: true,
+        creator: true,
       },
     });
   }
@@ -75,15 +76,18 @@ export class MeetingRepository {
   async saveIntelligence(meetingId: string, intelligence: any): Promise<void> {
     const { summary_short, summary_detailed, action_items, decisions, risks } = intelligence;
     
-    await prisma.$transaction([
+    const operations: any[] = [
       prisma.summary.create({
         data: {
           meetingId,
           short: summary_short,
           detailed: summary_detailed,
         }
-      }),
-      prisma.actionItem.createMany({
+      })
+    ];
+
+    if (action_items && action_items.length > 0) {
+      operations.push(prisma.actionItem.createMany({
         data: action_items.map((item: any) => {
           const d = item.deadline ? new Date(item.deadline) : null;
           const isValidDate = d instanceof Date && !isNaN(d.getTime());
@@ -97,23 +101,31 @@ export class MeetingRepository {
             deadline: isValidDate ? d : null
           };
         })
-      }),
-      prisma.decision.createMany({
+      }));
+    }
+
+    if (decisions && decisions.length > 0) {
+      operations.push(prisma.decision.createMany({
         data: decisions.map((d: any) => ({
           meetingId,
           content: typeof d === 'string' ? d : JSON.stringify(d)
         }))
-      }),
-      prisma.risk.createMany({
+      }));
+    }
+
+    if (risks && risks.length > 0) {
+      operations.push(prisma.risk.createMany({
         data: risks.map((r: any) => ({
           meetingId,
-          content: r.risk || 'No description provided',
-          severity: ['LOW', 'MEDIUM', 'HIGH'].includes(String(r.severity).toUpperCase()) 
-            ? (String(r.severity).toUpperCase() as any) 
+          content: r.risk || r.content || 'No description provided',
+          severity: ['LOW', 'MEDIUM', 'HIGH'].includes(String(r.severity || r.priority).toUpperCase()) 
+            ? (String(r.severity || r.priority).toUpperCase() as any) 
             : 'MEDIUM'
         }))
-      })
-    ]);
+      }));
+    }
+    
+    await prisma.$transaction(operations);
   }
 }
 

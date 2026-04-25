@@ -1,5 +1,6 @@
 import { meetingRepository } from '../repositories/meeting.repository';
 import { aiService } from '../services/ai.service';
+import { EmailService } from '../services/email.service';
 import { MeetingStatus } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
@@ -55,6 +56,24 @@ export class ProcessingService {
       console.log(`🔄 [${meetingId}] Step 3: Saving final report...`);
       await meetingRepository.saveIntelligence(meetingId, finalIntelligence);
       await meetingRepository.updateStatus(meetingId, MeetingStatus.PROCESSED);
+
+      // 4. Notify
+      try {
+        const fullMeeting = await meetingRepository.findById(meetingId);
+        // @ts-ignore
+        if (fullMeeting && fullMeeting.creator?.email) {
+          console.log(`📧 [${meetingId}] Sending summary email to: ${fullMeeting.creator.email}`);
+          await EmailService.sendMeetingSummary(
+            // @ts-ignore
+            fullMeeting.creator.email,
+            fullMeeting.title,
+            finalIntelligence.summary_short,
+            meetingId
+          );
+        }
+      } catch (notifyError) {
+        console.error(`⚠️ [${meetingId}] Notification failed:`, notifyError);
+      }
 
       console.log(`🎉 [${meetingId}] SUCCESS: Meeting processed completely.`);
     } catch (error: any) {
