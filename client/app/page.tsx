@@ -1,316 +1,252 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { 
+  CheckCircle2, BrainCircuit, ShieldCheck, Sparkles, Zap, ArrowRight,
+  Globe, MessageSquare, Database, Search, Users
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+
 import { useSession } from "next-auth/react";
-import { FileAudio, FileVideo, Plus, Search, Calendar, Users, CheckCircle2, Loader2, Play, BarChart3, List, LayoutDashboard } from "lucide-react";
-import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
-import { MeetingCard } from "./components/MeetingCard";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+export default function LandingPage() {
+  const { status } = useSession();
+  const targetRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: targetRef,
+    offset: ["start end", "end start"],
+  });
 
-export default function Home() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [meetings, setMeetings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [workspaceName, setWorkspaceName] = useState("Your Workspace");
-  const [view, setView] = useState<"meetings" | "analytics">("meetings");
-
-  // Derived IDs from session
-  const USER_ID = session?.user?.id;
-  // @ts-ignore
-  const WORKSPACE_ID = session?.user?.workspaceId;
-
-  const fetchWorkspace = async () => {
-    if (!WORKSPACE_ID) return;
-    try {
-      const response = await fetch(`${API_URL}/workspaces/me`, {
-        headers: {
-          "x-workspace-id": WORKSPACE_ID,
-          "x-user-id": USER_ID || "",
-        },
-      });
-      const data = await response.json();
-      setWorkspaceName(data.name || "Your Workspace");
-    } catch (error) {
-      console.error("Failed to fetch workspace:", error);
-    }
-  };
-
-  const fetchMeetings = async (query = searchQuery) => {
-    if (!WORKSPACE_ID || !USER_ID) return;
-    
-    try {
-      const url = query 
-        ? `${API_URL}/meetings?q=${encodeURIComponent(query)}`
-        : `${API_URL}/meetings`;
-
-      const response = await fetch(url, {
-        headers: {
-          "x-workspace-id": WORKSPACE_ID,
-          "x-user-id": USER_ID,
-        },
-      });
-      const data = await response.json();
-      setMeetings(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to fetch meetings:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchWorkspace();
-      const delayDebounceFn = setTimeout(() => {
-        fetchMeetings();
-      }, searchQuery ? 300 : 0);
-
-      return () => clearTimeout(delayDebounceFn);
-    }
-  }, [status, WORKSPACE_ID, USER_ID, searchQuery]);
-
-  useEffect(() => {
-    if (status === "authenticated" && !searchQuery) {
-      const interval = setInterval(fetchMeetings, 5000); // Poll every 5s
-      return () => clearInterval(interval);
-    }
-  }, [status, WORKSPACE_ID, USER_ID, searchQuery]);
-
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !WORKSPACE_ID || !USER_ID) return;
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", file.name.split('.')[0] || "New Meeting");
-    formData.append("workspaceId", WORKSPACE_ID);
-    formData.append("creatorId", USER_ID);
-
-    try {
-      const response = await fetch(`${API_URL}/meetings/upload`, {
-        method: "POST",
-        headers: {
-          "x-workspace-id": WORKSPACE_ID,
-          "x-user-id": USER_ID,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Upload failed");
-      
-      fetchMeetings();
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("Failed to upload meeting. Make sure the server is running and the file is valid.");
-    } finally {
-      setIsUploading(false);
-      // Reset input
-      event.target.value = '';
-    }
-  };
-
-  if (status === "loading") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
-        <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="text-lg">Loading session...</p>
-      </div>
-    );
-  }
+  const scale = useTransform(scrollYProgress, [0, 0.4], [0.8, 1]);
+  const opacity = useTransform(scrollYProgress, [0, 0.3], [0, 1]);
+  const y = useTransform(scrollYProgress, [0, 0.4], [100, 0]);
 
   return (
-    <div className="container mx-auto px-4 py-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{workspaceName}</h1>
-          <p className="text-slate-400">Real-time intelligence from your team's conversations.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className={`flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            {isUploading ? 'Uploading...' : 'Upload Meeting'}
-            <input 
-              type="file" 
-              className="hidden" 
-              accept="audio/*,video/*" 
-              onChange={handleUpload}
-              disabled={isUploading}
-            />
-          </label>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 mb-8 bg-slate-900/50 p-1 rounded-2xl border border-slate-800 w-fit backdrop-blur-xl">
-        <button 
-          onClick={() => setView("meetings")}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${view === "meetings" ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <List className="h-4 w-4" />
-          Intelligence
-        </button>
-        <button 
-          onClick={() => setView("analytics")}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${view === "analytics" ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <BarChart3 className="h-4 w-4" />
-          Analytics
-        </button>
-      </div>
-
-      {view === "analytics" ? (
-        <AnalyticsDashboard workspaceId={WORKSPACE_ID} userId={USER_ID || ""} />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <StatCard title="Total Meetings" value={meetings.length.toString()} change="+100%" icon={<FileVideo className="h-5 w-5" />} color="indigo" />
-            <StatCard title="Execution Hours" value={(meetings.length * 0.4).toFixed(1)} change="+82%" icon={<Calendar className="h-5 w-5" />} color="emerald" />
-            <StatCard title="Processed" value={meetings.filter(m => m.status === 'PROCESSED').length.toString()} change="94%" icon={<CheckCircle2 className="h-5 w-5" />} color="amber" />
-            <StatCard title="Contributors" value="1" change="0%" icon={<Users className="h-5 w-5" />} color="rose" />
-          </div>
-
-      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-semibold">Intelligence Feed</h2>
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 h-4 w-4 text-slate-500" />
-            <input 
-              type="text" 
-              placeholder="Search meeting memory..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-10 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 text-slate-500 hover:text-slate-300 transition-colors"
+    <div className="min-h-screen bg-[#020617]">
+      {/* Hero Section - Split Layout */}
+      <div className="relative pt-32 pb-40 overflow-hidden">
+        {/* Background Glows */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column: Text & Content */}
+            <div className="flex flex-col items-start text-left">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8"
               >
-                <Plus className="h-4 w-4 rotate-45" />
-              </button>
-            )}
+                <Sparkles className="h-3 w-3" />
+                Next Generation Meeting Intelligence
+              </motion.div>
+              
+              <motion.h1 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="text-5xl md:text-6xl font-black text-white tracking-tight mb-8 leading-[1.1]"
+              >
+                Turn your meetings into <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+                  organizational memory.
+                </span>
+              </motion.h1>
+              
+              <motion.p 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="text-lg text-slate-400 max-w-xl mb-10 leading-relaxed"
+              >
+                MeetingMind is an advanced intelligence layer for your organization. We capture, transcribe, and extract deep insights from your conversations, ensuring no critical decision or action item is ever lost to time.
+              </motion.p>
+              
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="flex items-center gap-4 mb-12"
+              >
+                {status === "authenticated" ? (
+                  <Link 
+                    href="/workspace" 
+                    className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-xl shadow-indigo-500/20 flex items-center gap-3 group"
+                  >
+                    Go to Workspace
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                ) : (
+                  <>
+                    <Link 
+                      href="/register" 
+                      className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-xl shadow-indigo-500/20 flex items-center gap-3 group"
+                    >
+                      Join MeetingMind
+                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                    <Link 
+                      href="/login" 
+                      className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-2xl font-bold transition-all border border-slate-800"
+                    >
+                      Sign In
+                    </Link>
+                  </>
+                )}
+              </motion.div>
+
+              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-900 w-full">
+                <div>
+                  <h4 className="text-white font-bold mb-2">99.9% Accuracy</h4>
+                  <p className="text-xs text-slate-500">Industry-leading Whisper models tuned for technical jargon.</p>
+                </div>
+                <div>
+                  <h4 className="text-white font-bold mb-2">Zero Latency</h4>
+                  <p className="text-xs text-slate-500">Real-time processing with automated email delivery.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Smaller Perspective Image */}
+            <motion.div 
+              ref={targetRef}
+              style={{ scale, opacity, y }}
+              className="relative"
+            >
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-[32px] blur-2xl transition-opacity group-hover:opacity-100"></div>
+                
+                <div className="relative bg-slate-900 rounded-[24px] overflow-hidden border border-white/10 shadow-2xl">
+                  {/* Shimmer */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -translate-x-full animate-shimmer z-20 pointer-events-none" />
+                  
+                  <Image 
+                    src="/images/hero_ultimate.jpg" 
+                    alt="MeetingMind Intelligence Dashboard" 
+                    width={800}
+                    height={600}
+                    className="w-full h-auto object-cover opacity-90 transition-transform duration-700 group-hover:scale-[1.05]"
+                    priority
+                  />
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
+      </div>
 
-        {loading && meetings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-            <Loader2 className="h-8 w-8 animate-spin mb-4" />
-            <p>Connecting to database...</p>
+      {/* Core Capabilities Section */}
+      <div id="capabilities" className="py-32 border-t border-slate-900 overflow-hidden bg-slate-950/20">
+        <div className="container mx-auto px-6 mb-16">
+          <div className="flex flex-col items-center text-center">
+            <h2 className="text-4xl font-black text-white mb-4">Core Capabilities</h2>
+            <p className="text-slate-500 max-w-xl">Advanced AI-driven modules that power your organizational memory.</p>
           </div>
-        ) : meetings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
-            <Play className="h-12 w-12 mb-4 opacity-20" />
-            <p>No meetings found. Upload one to start!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {meetings.map((meeting) => (
-              <MeetingRow 
-                key={meeting.id}
-                id={meeting.id}
-                title={meeting.title} 
-                date={new Date(meeting.createdAt).toLocaleDateString()} 
-                status={meeting.status} 
-                type="video" 
-                summary={meeting.summary?.short || "Processing intelligence..."}
-                onClick={() => router.push(`/meetings/${meeting.id}`)}
-              />
+        </div>
+        
+        {/* Flowing Ticker */}
+        <div className="relative flex overflow-x-hidden">
+          <div className="flex items-center gap-8 py-12 animate-marquee whitespace-nowrap">
+            {[
+              { title: "Sentiment Analysis", icon: <MessageSquare className="h-5 w-5" /> },
+              { title: "Action Item Tracking", icon: <CheckCircle2 className="h-5 w-5" /> },
+              { title: "Speaker Diarization", icon: <Users className="h-5 w-5" /> },
+              { title: "Risk Detection", icon: <ShieldCheck className="h-5 w-5" /> },
+              { title: "Key Decisions", icon: <BrainCircuit className="h-5 w-5" /> },
+              { title: "Transcript Search", icon: <Search className="h-5 w-5" /> },
+              { title: "Automated Summaries", icon: <Zap className="h-5 w-5" /> },
+              { title: "Global Intelligence", icon: <Globe className="h-5 w-5" /> },
+              { title: "Deep Insights", icon: <Database className="h-5 w-5" /> }
+            ].map((capability, i) => (
+              <div key={i} className="flex items-center gap-4 px-8 py-4 bg-slate-900/50 border border-slate-800 rounded-2xl backdrop-blur-xl">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                  {capability.icon}
+                </div>
+                <span className="text-xl font-bold text-slate-300">{capability.title}</span>
+              </div>
+            ))}
+            {/* Duplicate for seamless loop */}
+            {[
+              { title: "Sentiment Analysis", icon: <MessageSquare className="h-5 w-5" /> },
+              { title: "Action Item Tracking", icon: <CheckCircle2 className="h-5 w-5" /> },
+              { title: "Speaker Diarization", icon: <Users className="h-5 w-5" /> },
+              { title: "Risk Detection", icon: <ShieldCheck className="h-5 w-5" /> },
+              { title: "Key Decisions", icon: <BrainCircuit className="h-5 w-5" /> },
+              { title: "Transcript Search", icon: <Search className="h-5 w-5" /> },
+              { title: "Automated Summaries", icon: <Zap className="h-5 w-5" /> },
+              { title: "Global Intelligence", icon: <Globe className="h-5 w-5" /> },
+              { title: "Deep Insights", icon: <Database className="h-5 w-5" /> }
+            ].map((capability, i) => (
+              <div key={`dup-${i}`} className="flex items-center gap-4 px-8 py-4 bg-slate-900/50 border border-slate-800 rounded-2xl backdrop-blur-xl">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                  {capability.icon}
+                </div>
+                <span className="text-xl font-bold text-slate-300">{capability.title}</span>
+              </div>
             ))}
           </div>
-        )}
-      </div>
-    </>
-  )}
-</div>
-  );
-}
-
-function StatCard({ title, value, change, icon, color = "indigo" }: any) {
-  const colorMap: any = {
-    indigo: "border-indigo-500/20 text-indigo-400 bg-indigo-500/5",
-    emerald: "border-emerald-500/20 text-emerald-400 bg-emerald-500/5",
-    amber: "border-amber-500/20 text-amber-400 bg-amber-500/5",
-    rose: "border-rose-500/20 text-rose-400 bg-rose-500/5",
-  };
-
-  return (
-    <div className={`bg-slate-900/40 border ${colorMap[color]} p-6 rounded-[32px] backdrop-blur-xl group hover:scale-[1.02] transition-all duration-500`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2.5 bg-slate-950/40 rounded-xl border border-white/5 group-hover:scale-110 transition-transform">
-          {icon}
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{title}</span>
-          <span className="text-xs font-bold text-emerald-400 mt-1">{change}</span>
-        </div>
-      </div>
-      <h3 className="text-3xl font-black text-white tracking-tight">{value}</h3>
-    </div>
-  );
-}
-
-function MeetingRow({ id, title, date, status, type, summary, onClick }: any) {
-  const isProcessed = status === "PROCESSED";
-  const isFailed = status === "FAILED";
-  
-  return (
-    <div 
-      onClick={onClick}
-      className="group relative flex items-center gap-6 p-6 rounded-[32px] bg-slate-900/30 border border-slate-800/50 hover:border-indigo-500/30 transition-all duration-500 cursor-pointer backdrop-blur-xl overflow-hidden"
-    >
-      {/* Type Indicator */}
-      <div className={`relative z-10 h-16 w-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-        type === 'video' ? 'bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white' : 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-600 group-hover:text-white'
-      }`}>
-        {type === 'video' ? <FileVideo className="h-7 w-7" /> : <FileAudio className="h-7 w-7" />}
-        <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-slate-950 border-2 border-slate-900 flex items-center justify-center">
-          <div className={`h-1.5 w-1.5 rounded-full ${isProcessed ? 'bg-emerald-400 animate-pulse' : isFailed ? 'bg-rose-400' : 'bg-indigo-400 animate-spin'}`} />
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 relative z-10">
-        <div className="flex items-center justify-between mb-1.5">
-          <h4 className="text-lg font-bold text-slate-100 group-hover:text-white transition-colors truncate pr-4">
-            {title}
-          </h4>
-          <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap bg-slate-950/40 px-2 py-1 rounded-md border border-white/5">
-            {date}
-          </span>
-        </div>
-        <p className="text-sm text-slate-400 line-clamp-1 group-hover:text-slate-300 transition-colors mb-3">
-          {summary || "AI is currently extracting organizational memory from this session..."}
-        </p>
-        
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${
-            isProcessed ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
-            isFailed ? 'bg-rose-500/5 text-rose-400 border-rose-500/20' :
-            'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
-          }`}>
-            <div className={`h-1 w-1 rounded-full ${isProcessed ? 'bg-emerald-400' : isFailed ? 'bg-rose-400' : 'bg-indigo-400'}`} />
-            {status}
+      {/* Feature Grid */}
+      <div id="features" className="container mx-auto px-6 py-32 border-t border-slate-900">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="flex flex-col gap-6">
+            <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+              <BrainCircuit className="h-7 w-7 text-indigo-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white">AI Reasoning</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Advanced transcription that understands context, identifies speakers, and extracts meaningful patterns from technical discussions.
+            </p>
           </div>
-          <div className="h-1 w-1 rounded-full bg-slate-800" />
-          <span className="text-[10px] text-slate-500 font-medium">Memory Node #{id.slice(-4)}</span>
+          
+          <div className="flex flex-col gap-6" id="security">
+            <div className="h-14 w-14 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+              <ShieldCheck className="h-7 w-7 text-purple-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white">Enterprise Privacy</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Your data stays within your workspace. AES-256 encryption for storage and isolated environments for meeting analysis.
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-6">
+            <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Zap className="h-7 w-7 text-emerald-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-white">Instant Sharing</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Automated email summaries sent to participants immediately after the session concludes. Zero manual effort required.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Hover Arrow */}
-      <div className="relative z-10 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
-        <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-          <Play className="h-4 w-4 text-white fill-white" />
+      {/* Footer */}
+      <footer className="container mx-auto px-6 py-20 text-center">
+        <div className="flex flex-col items-center gap-8">
+          <div className="flex items-center gap-2 text-xl font-black text-white">
+            <BrainCircuit className="h-8 w-8 text-indigo-500" />
+            MeetingMind
+          </div>
+          <p className="text-slate-500 max-w-sm">
+            The premium intelligence platform for organizations that value their time and data.
+          </p>
+          <div className="flex gap-6 text-slate-400 text-sm font-medium">
+            <Link href="#" className="hover:text-white transition-colors">Documentation</Link>
+            <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="#" className="hover:text-white transition-colors">Terms</Link>
+          </div>
+          <div className="mt-8 text-[10px] font-mono text-slate-700 tracking-widest">
+            © 2026 MEETINGMIND PREMIUM • ALL RIGHTS RESERVED
+          </div>
         </div>
-      </div>
-
-      {/* Decorative Background Glow */}
-      <div className="absolute top-0 right-0 h-32 w-32 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+      </footer>
     </div>
   );
 }
-
