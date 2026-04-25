@@ -17,7 +17,7 @@ export class EmailService {
     const dashboardUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/meetings/${meetingId}`;
     
     if (!this.transporter) {
-      console.log('📝 [Email Mock] No credentials found. Logging email content:');
+      console.log('[Email Mock] No credentials found. Logging email content:');
       console.log(`   To: ${to}`);
       console.log(`   Subject: Intelligence Ready: ${meetingTitle}`);
       console.log(`   Summary: ${summary}`);
@@ -50,7 +50,7 @@ export class EmailService {
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('📧 [Email] Summary sent: %s', info.messageId);
+      console.log('[Email] Summary sent: %s', info.messageId);
       return info;
     } catch (error) {
       console.error('❌ [Email] Failed to send summary:', error);
@@ -60,7 +60,7 @@ export class EmailService {
 
   static async sendInvitation(to: string, workspaceName: string, inviteUrl: string) {
     if (!this.transporter) {
-      console.log('📝 [Email Mock] Invite:');
+      console.log('[Email Mock] Invite:');
       console.log(`   To: ${to}`);
       console.log(`   Workspace: ${workspaceName}`);
       console.log(`   URL: ${inviteUrl}`);
@@ -91,7 +91,7 @@ export class EmailService {
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('📧 [Email] Invitation sent: %s', info.messageId);
+      console.log('[Email] Invitation sent: %s', info.messageId);
       return info;
     } catch (error) {
       console.error('❌ [Email] Failed to send invitation:', error);

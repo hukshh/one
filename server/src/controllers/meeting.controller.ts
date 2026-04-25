@@ -24,12 +24,12 @@ export class MeetingController {
           try {
             console.log(`☁️ Uploading ${req.file.filename} to S3...`);
             storageKey = await StorageService.uploadFile(req.file.path, req.file.filename);
-            console.log(`✅ Uploaded to S3: ${storageKey}`);
+            console.log(`Uploaded to S3: ${storageKey}`);
             
             // Optionally delete local file after S3 upload
             // fs.unlinkSync(req.file.path); 
           } catch (s3Error) {
-            console.error('❌ S3 Upload failed, falling back to local storage:', s3Error);
+            console.error('S3 Upload failed, falling back to local storage:', s3Error);
           }
         }
       }
@@ -96,7 +96,7 @@ export class MeetingController {
         return res.json(meetings || []);
       }
 
-      console.log(`🔍 Fetching meetings for workspace: ${workspaceId}`);
+      console.log(`Fetching meetings for workspace: ${workspaceId}`);
       const meetings = await meetingRepository.findByWorkspaceId(workspaceId);
       res.json(meetings || []);
     } catch (error: any) {
@@ -114,7 +114,7 @@ export class MeetingController {
       res.setHeader('Content-Disposition', `attachment; filename=MeetingReport-${id}.pdf`);
       res.send(pdfBuffer);
     } catch (error: any) {
-      console.error('❌ Export PDF error:', error.message);
+      console.error('Export PDF error:', error.message);
       res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
     }
   }

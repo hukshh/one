@@ -50,7 +50,7 @@ export class AIService {
   }
 
   private async callLLM(prompt: string, isJson: boolean = false): Promise<any> {
-    console.log(`🚀 Calling Groq [${isJson ? 'JSON' : 'Text'}]...`);
+    console.log(`Calling Groq [${isJson ? 'JSON' : 'Text'}]...`);
     
     try {
       const response = await this.openai.chat.completions.create({
@@ -74,7 +74,7 @@ export class AIService {
         try {
           return JSON.parse(content);
         } catch (parseError) {
-          console.error('❌ JSON Parse Error. Content was:', content);
+          console.error('JSON Parse Error. Content was:', content);
           throw parseError;
         }
       }
@@ -90,7 +90,7 @@ export class AIService {
     try {
       return schema.parse(data);
     } catch (error: any) {
-      console.warn('⚠️ AI Response validation failed, using defaults where missing:', error.message);
+      console.warn('AI Response validation failed, using defaults where missing:', error.message);
       // Fallback: If AI fails to give us something, we provide a safe structure
       return {
         summary_short: data.summary_short || "Brief meeting recorded.",
@@ -103,7 +103,7 @@ export class AIService {
   }
 
   async transcribe(fileUrl: string): Promise<any[]> {
-    console.log(`🎙️ Transcribing audio from: ${fileUrl}...`);
+    console.log(`Transcribing audio from: ${fileUrl}...`);
     
     try {
       let fileStream: any;
@@ -114,7 +114,7 @@ export class AIService {
         // Optimization: Use local file system if it's a local upload
         const localFilename = fileUrl.split('/').pop()!;
         const localPath = path.join(process.cwd(), 'uploads', localFilename);
-        console.log(`📂 Using local file stream: ${localPath}`);
+        console.log(`Using local file stream: ${localPath}`);
         
         if (!fs.existsSync(localPath)) {
           throw new Error(`File not found at ${localPath}`);
