@@ -19,12 +19,12 @@ if (redisConnection) {
   );
 
   meetingWorker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} has completed!`);
+    console.log(`Job ${job.id} has completed!`);
   });
 
   meetingWorker.on('failed', (job, err) => {
-    console.error(`❌ Job ${job?.id} has failed with ${err.message}`);
+    console.error(`Job ${job?.id} has failed with ${err.message}`);
   });
 } else {
-  console.log('⚠️ [BullMQ] Redis unavailable. Background workers skipped.');
+  console.log('[BullMQ] Redis unavailable. Background workers skipped.');
 }

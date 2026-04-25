@@ -13,8 +13,8 @@ const redisConfig = {
   },
 };
 
-// Disabled Redis for clean logs
-export const redisConnection = null as any; 
+// Enabled Redis for background processing
+export const redisConnection = new Redis(redisConfig); 
 
 export let isRedisConnected = false;
 
