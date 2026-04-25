@@ -13,5 +13,6 @@ router.use(authMiddleware);
 router.get('/me', workspaceController.getById);
 router.patch('/me', workspaceController.update);
 router.post('/invite', workspaceController.invite);
+router.get('/analytics', workspaceController.getAnalytics);
 
 export default router;

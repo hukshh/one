@@ -129,6 +129,19 @@ export class WorkspaceController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  getAnalytics = async (req: Request, res: Response) => {
+    try {
+      const workspaceId = req.headers['x-workspace-id'] as string;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace ID required' });
+
+      const analytics = await workspaceRepository.getAnalytics(workspaceId);
+      res.json(analytics);
+    } catch (error) {
+      console.error('Analytics error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
 
 export const workspaceController = new WorkspaceController();
