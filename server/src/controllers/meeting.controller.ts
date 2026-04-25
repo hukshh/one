@@ -62,6 +62,13 @@ export class MeetingController {
   list = async (req: Request, res: Response) => {
     try {
       const workspaceId = (req.headers['x-workspace-id'] as string) || "69ea5c6ced5550131e0e66db";
+      const { q } = req.query;
+
+      if (q && typeof q === 'string') {
+        const meetings = await meetingRepository.search(workspaceId, q);
+        return res.json(meetings || []);
+      }
+
       console.log(`🔍 Fetching meetings for workspace: ${workspaceId}`);
       const meetings = await meetingRepository.findByWorkspaceId(workspaceId);
       res.json(meetings || []);

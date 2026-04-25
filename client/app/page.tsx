@@ -13,17 +13,22 @@ export default function Home() {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Derived IDs from session
   const USER_ID = session?.user?.id;
   // @ts-ignore
   const WORKSPACE_ID = session?.user?.workspaceId;
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = async (query = searchQuery) => {
     if (!WORKSPACE_ID || !USER_ID) return;
     
     try {
-      const response = await fetch(`${API_URL}/meetings`, {
+      const url = query 
+        ? `${API_URL}/meetings?q=${encodeURIComponent(query)}`
+        : `${API_URL}/meetings`;
+
+      const response = await fetch(url, {
         headers: {
           "x-workspace-id": WORKSPACE_ID,
           "x-user-id": USER_ID,
@@ -40,11 +45,20 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchMeetings();
+      const delayDebounceFn = setTimeout(() => {
+        fetchMeetings();
+      }, searchQuery ? 300 : 0);
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [status, WORKSPACE_ID, USER_ID, searchQuery]);
+
+  useEffect(() => {
+    if (status === "authenticated" && !searchQuery) {
       const interval = setInterval(fetchMeetings, 5000); // Poll every 5s
       return () => clearInterval(interval);
     }
-  }, [status, WORKSPACE_ID, USER_ID]);
+  }, [status, WORKSPACE_ID, USER_ID, searchQuery]);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -121,13 +135,23 @@ export default function Home() {
       <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl font-semibold">Intelligence Feed</h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-slate-500" />
             <input 
               type="text" 
               placeholder="Search meeting memory..." 
-              className="pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                <Plus className="h-4 w-4 rotate-45" />
+              </button>
+            )}
           </div>
         </div>
 

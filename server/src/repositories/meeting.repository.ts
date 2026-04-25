@@ -43,6 +43,29 @@ export class MeetingRepository {
     });
   }
 
+  async search(workspaceId: string, query: string): Promise<Meeting[]> {
+    const words = query.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return this.findByWorkspaceId(workspaceId);
+
+    return prisma.meeting.findMany({
+      where: {
+        workspaceId,
+        AND: words.map(word => ({
+          OR: [
+            { title: { contains: word, mode: 'insensitive' } },
+            { summary: { short: { contains: word, mode: 'insensitive' } } },
+            { summary: { detailed: { contains: word, mode: 'insensitive' } } },
+            { transcript: { some: { content: { contains: word, mode: 'insensitive' } } } },
+          ]
+        }))
+      },
+      include: {
+        summary: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
   async updateStatus(id: string, status: MeetingStatus): Promise<Meeting> {
     return prisma.meeting.update({
       where: { id },
