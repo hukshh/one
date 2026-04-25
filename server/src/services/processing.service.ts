@@ -8,15 +8,26 @@ import path from 'path';
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class ProcessingService {
-  static async process(meetingId: string, fileUrl: string, jobId?: string) {
+  static async process(meetingId: string, fileUrl: string, storageKey?: string, jobId?: string) {
     const context = jobId ? `[Job ${jobId}]` : `[Local]`;
     console.log(`🎬 ${context} Starting process for meeting: ${meetingId}`);
 
     try {
+      let processingUrl = fileUrl;
+
+      // If we have an S3 key, generate a temporary presigned URL for the AI service
+      if (storageKey) {
+        const { StorageService } = await import('./storage.service');
+        if (StorageService.isConfigured()) {
+          console.log(`🔗 [${meetingId}] Generating presigned URL for transcription...`);
+          processingUrl = await StorageService.getPresignedUrl(storageKey);
+        }
+      }
+
       // 1. Transcribe
       console.log(`🔄 [${meetingId}] Step 1: Transcribing audio...`);
       await meetingRepository.updateStatus(meetingId, MeetingStatus.TRANSCRIBING);
-      const segments = await aiService.transcribe(fileUrl);
+      const segments = await aiService.transcribe(processingUrl);
       
       if (!segments || segments.length === 0) {
         throw new Error('Transcription failed: No segments returned');

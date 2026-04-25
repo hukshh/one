@@ -1,6 +1,5 @@
-import { PrismaClient, Meeting, MeetingStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Meeting, MeetingStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 export class MeetingRepository {
   async create(data: {
@@ -9,6 +8,7 @@ export class MeetingRepository {
     creatorId: string;
     videoUrl?: string;
     audioUrl?: string;
+    storageKey?: string;
   }): Promise<Meeting> {
     return prisma.meeting.create({
       data: {

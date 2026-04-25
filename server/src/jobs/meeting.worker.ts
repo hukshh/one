@@ -9,8 +9,8 @@ if (redisConnection) {
   meetingWorker = new Worker(
     MEETING_QUEUE_NAME,
     async (job: Job) => {
-      const { meetingId, fileUrl } = job.data;
-      await ProcessingService.process(meetingId, fileUrl, job.id);
+      const { meetingId, fileUrl, storageKey } = job.data;
+      await ProcessingService.process(meetingId, fileUrl, storageKey, job.id);
     },
     {
       connection: redisConnection,

@@ -14,11 +14,28 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("Your Workspace");
 
   // Derived IDs from session
   const USER_ID = session?.user?.id;
   // @ts-ignore
   const WORKSPACE_ID = session?.user?.workspaceId;
+
+  const fetchWorkspace = async () => {
+    if (!WORKSPACE_ID) return;
+    try {
+      const response = await fetch(`${API_URL}/workspaces/me`, {
+        headers: {
+          "x-workspace-id": WORKSPACE_ID,
+          "x-user-id": USER_ID || "",
+        },
+      });
+      const data = await response.json();
+      setWorkspaceName(data.name || "Your Workspace");
+    } catch (error) {
+      console.error("Failed to fetch workspace:", error);
+    }
+  };
 
   const fetchMeetings = async (query = searchQuery) => {
     if (!WORKSPACE_ID || !USER_ID) return;
@@ -45,6 +62,7 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "authenticated") {
+      fetchWorkspace();
       const delayDebounceFn = setTimeout(() => {
         fetchMeetings();
       }, searchQuery ? 300 : 0);
@@ -107,7 +125,7 @@ export default function Home() {
     <div className="container mx-auto px-4 py-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Meeting Memory</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{workspaceName}</h1>
           <p className="text-slate-400">Real-time intelligence from your team's conversations.</p>
         </div>
         <div className="flex items-center gap-3">

@@ -12,9 +12,10 @@ model Workspace {
   name      String
   slug      String   @unique
   plan      String   @default("free") // free, pro, enterprise
-  users     User[]
-  meetings  Meeting[]
-  createdAt DateTime @default(now())
+  users       User[]
+  meetings    Meeting[]
+  invitations Invitation[]
+  createdAt   DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
@@ -37,6 +38,7 @@ model Meeting {
   status            MeetingStatus       @default(UPLOADED)
   videoUrl          String?
   audioUrl          String?
+  storageKey        String?
   duration          Float?
   workspaceId       String              @db.ObjectId
   workspace         Workspace           @relation(fields: [workspaceId], references: [id])
@@ -164,5 +166,17 @@ enum JobStatus {
   RUNNING
   COMPLETED
   FAILED
+}
+model Invitation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  email       String
+  token       String   @unique
+  workspaceId String   @db.ObjectId
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role        String   @default("member")
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
 }
 

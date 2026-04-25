@@ -11,11 +11,27 @@ export class MeetingController {
     try {
       const { title, workspaceId, creatorId } = req.body;
       let fileUrl = req.body.fileUrl;
+      let storageKey: string | undefined;
 
       // If a file was uploaded via multer
       if (req.file) {
         const baseUrl = process.env.APP_URL || 'http://localhost:4000';
         fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+
+        // Attempt S3 upload if configured
+        const { StorageService } = await import('../services/storage.service');
+        if (StorageService.isConfigured()) {
+          try {
+            console.log(`☁️ Uploading ${req.file.filename} to S3...`);
+            storageKey = await StorageService.uploadFile(req.file.path, req.file.filename);
+            console.log(`✅ Uploaded to S3: ${storageKey}`);
+            
+            // Optionally delete local file after S3 upload
+            // fs.unlinkSync(req.file.path); 
+          } catch (s3Error) {
+            console.error('❌ S3 Upload failed, falling back to local storage:', s3Error);
+          }
+        }
       }
 
       if (!title || !workspaceId || !creatorId || !fileUrl) {
@@ -27,11 +43,12 @@ export class MeetingController {
         workspaceId,
         creatorId,
         videoUrl: fileUrl,
+        storageKey,
       });
 
       // Add to background processing queue
       const { QueueService } = await import('../services/queue.service');
-      await QueueService.addMeetingJob(meeting.id, fileUrl);
+      await QueueService.addMeetingJob(meeting.id, fileUrl, storageKey);
 
       res.status(201).json({
         message: 'Meeting uploaded and processing queued',
@@ -46,10 +63,20 @@ export class MeetingController {
   getById = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const meeting = await meetingRepository.findById(id);
+      const meeting: any = await meetingRepository.findById(id);
 
       if (!meeting) {
         return res.status(404).json({ error: 'Meeting not found' });
+      }
+
+      // If meeting has a storage key, generate a presigned URL
+      if (meeting.storageKey) {
+        const { StorageService } = await import('../services/storage.service');
+        try {
+          meeting.videoUrl = await StorageService.getPresignedUrl(meeting.storageKey);
+        } catch (s3Error) {
+          console.error('❌ Failed to generate presigned URL:', s3Error);
+        }
       }
 
       res.json(meeting);

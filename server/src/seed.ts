@@ -1,6 +1,5 @@
 require('dotenv').config();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('./lib/prisma').default;
 
 async function main() {
   console.log('🌱 Seeding database...');

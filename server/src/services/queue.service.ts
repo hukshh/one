@@ -16,15 +16,15 @@ export const meetingQueue = redisConnection ? new Queue(MEETING_QUEUE_NAME, {
 }) : null;
 
 export class QueueService {
-  static async addMeetingJob(meetingId: string, fileUrl: string) {
+  static async addMeetingJob(meetingId: string, fileUrl: string, storageKey?: string) {
     if (isRedisConnected && meetingQueue) {
       console.log(`📡 [Redis] Queuing meeting: ${meetingId}`);
-      return meetingQueue.add('process-meeting', { meetingId, fileUrl });
+      return meetingQueue.add('process-meeting', { meetingId, fileUrl, storageKey });
     } else {
       console.log(`⚠️ [Fallback] Redis unavailable. Processing meeting in-process: ${meetingId}`);
       // Fallback: Run in background without blocking the main thread, 
       // mimicking the queue behavior but without persistence.
-      ProcessingService.process(meetingId, fileUrl).catch(err => {
+      ProcessingService.process(meetingId, fileUrl, storageKey).catch(err => {
         console.error(`❌ [Fallback Error] Failed to process ${meetingId}:`, err.message);
       });
       return { id: 'fallback-' + Date.now() };

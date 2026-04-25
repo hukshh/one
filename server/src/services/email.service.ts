@@ -57,4 +57,45 @@ export class EmailService {
       // Don't throw, we don't want to crash the processing pipeline if email fails
     }
   }
+
+  static async sendInvitation(to: string, workspaceName: string, inviteUrl: string) {
+    if (!this.transporter) {
+      console.log('📝 [Email Mock] Invite:');
+      console.log(`   To: ${to}`);
+      console.log(`   Workspace: ${workspaceName}`);
+      console.log(`   URL: ${inviteUrl}`);
+      return { messageId: 'mock-invite-' + Date.now() };
+    }
+
+    const mailOptions = {
+      from: 'onboarding@resend.dev',
+      to,
+      subject: `Join ${workspaceName} on MeetingMind`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h1 style="color: #1e1b4b; font-size: 24px; margin-bottom: 16px;">You've been invited!</h1>
+          <p style="color: #475569; font-size: 16px; line-height: 1.5;">Hello,</p>
+          <p style="color: #475569; font-size: 16px; line-height: 1.5;">Your teammate has invited you to join the <strong>"${workspaceName}"</strong> workspace on MeetingMind.</p>
+          
+          <p style="color: #475569; font-size: 16px; line-height: 1.5;">Click the button below to join the team and start collaborating on meeting intelligence.</p>
+          
+          <a href="${inviteUrl}" style="display: inline-block; background-color: #6366f1; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">Join Workspace</a>
+          
+          <p style="color: #94a3b8; font-size: 12px; margin-top: 20px;">This invitation will expire in 7 days.</p>
+          
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+          <p style="color: #94a3b8; font-size: 12px; text-align: center;">Sent by MeetingMind Premium Intelligence Platform</p>
+        </div>
+      `,
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('📧 [Email] Invitation sent: %s', info.messageId);
+      return info;
+    } catch (error) {
+      console.error('❌ [Email] Failed to send invitation:', error);
+      throw error;
+    }
+  }
 }
