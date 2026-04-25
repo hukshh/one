@@ -7,13 +7,11 @@ export class ExportService {
     if (!meeting) throw new Error('Meeting not found');
 
     return new Promise((resolve, reject) => {
+      // Disable autoPageBreak to have full control, or just use a larger margin
       const doc = new PDFDocument({
         margin: 50,
         size: 'A4',
-        info: {
-          Title: `Meeting Report: ${meeting.title}`,
-          Author: 'MeetingMind AI',
-        },
+        bufferPages: true, // Required for page numbering
       });
 
       const chunks: Buffer[] = [];
@@ -21,87 +19,87 @@ export class ExportService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', (err) => reject(err));
 
-      // --- Header ---
-      doc.rect(0, 0, doc.page.width, 100).fill('#1e1b4b');
-      doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('MeetingMind', 50, 40);
-      doc.fontSize(10).font('Helvetica').text('PREMIUM MEETING INTELLIGENCE', 50, 65);
+      // --- Compact Header ---
+      doc.fillColor('#1e1b4b').fontSize(22).font('Helvetica-Bold').text(meeting.title, 50, 50);
+      doc.fontSize(10).font('Helvetica').fillColor('#64748b').text(`${new Date(meeting.createdAt).toLocaleDateString()} • ${meeting.duration || 0}m Analysis`, 50, 75);
+      doc.moveTo(50, 95).lineTo(545, 95).strokeColor('#e2e8f0').lineWidth(1).stroke();
+      doc.moveDown(1.5);
 
-      // --- Title Section ---
-      doc.fillColor('#1e1b4b').fontSize(22).font('Helvetica-Bold').text(meeting.title, 50, 130);
-      doc.fontSize(10).font('Helvetica').fillColor('#64748b').text(`${new Date(meeting.createdAt).toLocaleDateString()}  •  ${meeting.duration || 0} Minutes Analysis`, 50, 160);
-
-      doc.moveDown(2);
-
-      // --- Executive Summary ---
+      // 1. Meeting Summary
       if (meeting.summary) {
-        this.drawSectionHeader(doc, 'EXECUTIVE SUMMARY', '#6366f1');
-        doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e293b').text('Key Takeaway:', { underline: true });
-        doc.fontSize(11).font('Helvetica-Oblique').fillColor('#475569').text(meeting.summary.short, { oblique: true });
-        doc.moveDown(0.5);
-        doc.fontSize(11).font('Helvetica').fillColor('#334155').text(meeting.summary.detailed, {
-          align: 'justify',
-          lineGap: 4
-        });
+        this.writeHeader(doc, 'MEETING SUMMARY', '#6366f1');
+        doc.fillColor('#1e293b').fontSize(11).font('Helvetica').text(meeting.summary.detailed, { align: 'justify' });
         doc.moveDown(1.5);
       }
 
-      // --- Action Items ---
+      // 2. Action Items
       // @ts-ignore
       if (meeting.actionItems && meeting.actionItems.length > 0) {
-        this.drawSectionHeader(doc, 'ACTION ITEMS', '#10b981');
+        this.writeHeader(doc, 'TO-DO LIST', '#10b981');
         // @ts-ignore
         meeting.actionItems.forEach((item: any, i: number) => {
-          doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e293b').text(`${i + 1}. ${item.task}`);
-          doc.fontSize(9).font('Helvetica').fillColor('#64748b')
-             .text(`Owner: ${item.owner || 'Unassigned'}  |  Priority: ${item.priority}  |  Due: ${item.deadline ? new Date(item.deadline).toLocaleDateString() : 'N/A'}`);
+          this.ensureSpace(doc, 40);
+          doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold').text(`${i + 1}. ${item.task}`);
+          doc.fontSize(9).font('Helvetica').fillColor('#64748b').text(`   Owner: ${item.owner || 'N/A'} | Priority: ${item.priority}`);
           doc.moveDown(0.5);
         });
         doc.moveDown(1);
       }
 
-      // --- Key Decisions ---
+      // 3. Key Decisions
       // @ts-ignore
       if (meeting.decisions && meeting.decisions.length > 0) {
-        this.drawSectionHeader(doc, 'KEY DECISIONS', '#4f46e5');
+        this.writeHeader(doc, 'KEY DECISIONS', '#4f46e5');
         // @ts-ignore
         meeting.decisions.forEach((decision: any, i: number) => {
-          doc.fontSize(11).font('Helvetica').fillColor('#334155').text(`• ${decision.content}`);
+          this.ensureSpace(doc, 25);
+          doc.fillColor('#334155').fontSize(11).font('Helvetica').text(`• ${decision.content}`);
           doc.moveDown(0.3);
         });
         doc.moveDown(1);
       }
 
-      // --- Risks ---
+      // 4. Potential Risks
       // @ts-ignore
       if (meeting.risks && meeting.risks.length > 0) {
-        this.drawSectionHeader(doc, 'IDENTIFIED RISKS', '#f59e0b');
+        this.writeHeader(doc, 'POTENTIAL RISKS', '#ef4444');
         // @ts-ignore
-        meeting.risks.forEach((risk: any, i: number) => {
-          doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e293b').text(`! ${risk.content}`);
-          doc.fontSize(9).font('Helvetica').fillColor('#ef4444').text(`Severity: ${risk.severity}`);
+        meeting.risks.forEach((risk: any) => {
+          this.ensureSpace(doc, 35);
+          doc.fillColor('#b91c1c').fontSize(11).font('Helvetica-Bold').text(`! ${risk.content}`);
+          doc.fontSize(9).font('Helvetica').fillColor('#ef4444').text(`   Severity: ${risk.severity}`);
           doc.moveDown(0.5);
         });
       }
 
-      // --- Footer ---
-      const pageCount = doc.bufferedPageRange().count;
-      for (let i = 0; i < pageCount; i++) {
-        doc.switchToPage(i);
-        doc.fontSize(8).fillColor('#94a3b8').text(
-          `MeetingMind AI Intelligence Report | Confidential | Page ${i + 1} of ${pageCount}`,
-          50,
-          doc.page.height - 40,
-          { align: 'center' }
-        );
+      // --- Page Numbers (ONLY if more than 1 page) ---
+      const range = doc.bufferedPageRange();
+      if (range.count > 1) {
+        for (let i = range.start; i < range.start + range.count; i++) {
+          doc.switchToPage(i);
+          doc.fontSize(8).fillColor('#94a3b8').text(
+            `Page ${i + 1} of ${range.count}`,
+            50,
+            doc.page.height - 40,
+            { align: 'center' }
+          );
+        }
       }
 
       doc.end();
     });
   }
 
-  private static drawSectionHeader(doc: PDFKit.PDFDocument, text: string, color: string) {
-    doc.fillColor(color).rect(50, doc.y, 3, 15).fill();
-    doc.fillColor(color).fontSize(12).font('Helvetica-Bold').text(text, 60, doc.y - 12);
-    doc.moveDown(0.8);
+  private static writeHeader(doc: PDFKit.PDFDocument, text: string, color: string) {
+    this.ensureSpace(doc, 40);
+    doc.fillColor(color).fontSize(12).font('Helvetica-Bold').text(text);
+    doc.moveDown(0.5);
+  }
+
+  private static ensureSpace(doc: PDFKit.PDFDocument, neededHeight: number) {
+    const bottomMargin = 70;
+    if (doc.y + neededHeight > doc.page.height - bottomMargin) {
+      doc.addPage();
+    }
   }
 }

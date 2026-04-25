@@ -58,10 +58,6 @@ export function Header() {
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
           </Link>
-          <Link href="#" className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-indigo-400 transition-all">
-            <Search className="h-4 w-4" />
-            Intelligence
-          </Link>
           <Link href="/settings" className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-indigo-400 transition-all">
             <Settings className="h-4 w-4" />
             Settings

@@ -118,6 +118,34 @@ export class MeetingController {
       res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
     }
   }
+
+  chat = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+
+      if (!message) return res.status(400).json({ error: 'Message required' });
+
+      const meeting = await meetingRepository.findById(id);
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+
+      const fullTranscript = meeting.transcript
+        .map(s => `[${new Date(s.startTime * 1000).toISOString().substr(14, 5)}] ${s.speakerLabel || 'Speaker'}: ${s.content}`)
+        .join('\n');
+
+      const context = {
+        summary: meeting.summary?.detailed,
+        actionItems: meeting.actionItems?.map((a: any) => a.task),
+        decisions: meeting.decisions?.map((d: any) => d.content),
+      };
+
+      const answer = await aiService.ask(fullTranscript, message, context);
+      res.json({ answer });
+    } catch (error) {
+      console.error('Chat error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
 
 export const meetingController = new MeetingController();

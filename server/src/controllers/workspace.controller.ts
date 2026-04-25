@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { workspaceRepository } from '../repositories/workspace.repository';
+import prisma from '../lib/prisma';
+import { EmailService } from '../services/email.service';
 
 export class WorkspaceController {
   getById = async (req: Request, res: Response) => {
@@ -14,6 +16,18 @@ export class WorkspaceController {
         return res.status(404).json({ error: 'Workspace not found' });
       }
 
+      res.json(workspace);
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  getSettings = async (req: Request, res: Response) => {
+    try {
+      const workspaceId = req.headers['x-workspace-id'] as string;
+      if (!workspaceId) return res.status(400).json({ error: 'Workspace ID required' });
+
+      const workspace = await workspaceRepository.findById(workspaceId);
       res.json(workspace);
     } catch (error) {
       res.status(500).json({ error: 'Internal server error' });
@@ -140,6 +154,37 @@ export class WorkspaceController {
     } catch (error) {
       console.error('Analytics error:', error);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  shareReport = async (req: Request, res: Response) => {
+    try {
+      const { meetingId, email, workspaceId } = req.body;
+      if (!meetingId || !email || !workspaceId) {
+        return res.status(400).json({ error: 'Missing meetingId, email, or workspaceId' });
+      }
+
+      const meeting = await prisma.meeting.findUnique({
+        where: { id: meetingId },
+        include: { summary: true }
+      });
+
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+
+      console.log(`✉️ Dispatched shared report request for ${meeting.title} to ${email}`);
+
+      // Re-using the robust summary email logic from EmailService
+      await EmailService.sendMeetingSummary(
+        email, 
+        meeting.title, 
+        meeting.summary?.short || 'Meeting analysis complete.', 
+        meetingId
+      );
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('❌ Share report error:', error.message);
+      res.status(500).json({ error: 'Failed to share report', details: error.message });
     }
   }
 }

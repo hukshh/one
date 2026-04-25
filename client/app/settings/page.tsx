@@ -92,6 +92,15 @@ export default function SettingsPage() {
     }
   };
 
+  const [copied, setCopied] = useState(false);
+
+  const copyWorkspaceId = () => {
+    if (!WORKSPACE_ID) return;
+    navigator.clipboard.writeText(WORKSPACE_ID);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
@@ -205,37 +214,23 @@ export default function SettingsPage() {
           </section>
         </div>
 
-        {/* Right Column: Info/Plan */}
+        {/* Right Column: Identity */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white shadow-xl shadow-indigo-500/10">
-            <h3 className="text-lg font-bold mb-1">Premium Plan</h3>
-            <p className="text-indigo-100 text-xs mb-6">Unlimited meeting intelligence for your team.</p>
-            
-            <div className="space-y-3 mb-8">
-              <div className="flex items-center gap-2 text-xs text-indigo-100">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>Unlimited uploads</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-indigo-100">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>Priority processing</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-indigo-100">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>Advanced search</span>
-              </div>
+          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl">
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Workspace Identity</h4>
+            <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 mb-4">
+              <p className="text-[10px] font-mono text-slate-400 break-all leading-relaxed">
+                {WORKSPACE_ID}
+              </p>
             </div>
-
-            <button className="w-full py-2.5 bg-white text-indigo-600 rounded-xl font-bold text-sm shadow-lg shadow-black/10 hover:bg-indigo-50 transition-all">
-              Manage Subscription
+            <button 
+              onClick={copyWorkspaceId}
+              className={`w-full py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                copied ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              {copied ? 'Identity Copied!' : 'Copy Workspace ID'}
             </button>
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-            <h4 className="text-sm font-semibold mb-2">Workspace ID</h4>
-            <code className="text-[10px] bg-slate-800 px-2 py-1 rounded block truncate text-slate-400">
-              {WORKSPACE_ID}
-            </code>
           </div>
         </div>
       </div>

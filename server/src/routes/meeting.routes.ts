@@ -26,5 +26,6 @@ router.post('/upload', upload.single('file'), meetingController.upload);
 router.get('/', meetingController.list);
 router.get('/:id', meetingController.getById);
 router.get('/:id/export/pdf', meetingController.exportPdf);
+router.post('/:id/chat', meetingController.chat);
 
 export default router;

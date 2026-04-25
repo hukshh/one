@@ -56,7 +56,11 @@ export class AIService {
       const response = await this.openai.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
-          { role: "system", content: "You are an expert meeting analyst. Always respond in valid JSON format when requested." },
+          { 
+            role: "system", 
+            content: `You are an expert meeting analyst. You handle multilingual transcripts (English, Hindi, Hinglish) with precision.
+            If JSON is requested, return ONLY raw JSON. If Text is requested, return clean, professional prose without any JSON structure.` 
+          },
           { role: "user", content: prompt }
         ],
         response_format: isJson ? { type: "json_object" } : { type: "text" },
@@ -183,6 +187,27 @@ export class AIService {
       severity: z.enum(['LOW', 'MEDIUM', 'HIGH'])
     }))
   });
+
+  async ask(transcript: string, question: string, context?: any): Promise<string> {
+    const prompt = `You are the MeetingMind AI Assistant. Your task is to provide a helpful, professional, and clear answer to the user's question based on the provided meeting context and transcript.
+    
+    MEETING INTELLIGENCE CONTEXT:
+    - Summary: ${context?.summary || 'N/A'}
+    - Key Action Items: ${context?.actionItems?.join(', ') || 'N/A'}
+    - Key Decisions: ${context?.decisions?.join(', ') || 'N/A'}
+
+    TRANSCRIPT CONTEXT:
+    - The transcript may contain a mix of English, Hindi, and Hinglish. 
+    - Please understand the context carefully regardless of the language used.
+    
+    TRANSCRIPT:
+    ${transcript}
+    
+    USER QUESTION:
+    ${question}`;
+
+    return this.callLLM(prompt, false);
+  }
 }
 
 export const aiService = new AIService();

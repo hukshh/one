@@ -12,6 +12,8 @@ router.use(authMiddleware);
 
 router.get('/me', workspaceController.getById);
 router.patch('/me', workspaceController.update);
+router.get('/settings', workspaceController.getSettings);
+router.post('/share-report', workspaceController.shareReport);
 router.post('/invite', workspaceController.invite);
 router.get('/analytics', workspaceController.getAnalytics);
 
