@@ -104,40 +104,41 @@ export function AnalyticsDashboard({ workspaceId, userId }: { workspaceId: strin
               </div>
             </div>
 
-            <div className="h-[300px] w-full">
+            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.timeline}>
+                <AreaChart data={data.timeline} margin={{ top: 10, right: 10, left: -30, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} opacity={0.5} />
                   <XAxis 
                     dataKey="date" 
                     stroke="#475569" 
-                    fontSize={10} 
+                    fontSize={9} 
                     tickFormatter={(val) => val.split("-").slice(1).join("/")} 
                     axisLine={false}
                     tickLine={false}
                     dy={10}
+                    minTickGap={30}
                   />
-                  <YAxis stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#475569" fontSize={9} axisLine={false} tickLine={false} dx={-10} />
                   <Tooltip 
                     content={<CustomTooltip />}
                     cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
                   />
                   <Area 
-                    type="natural" 
+                    type="monotone" 
                     dataKey="count" 
                     stroke="#6366f1" 
-                    strokeWidth={4}
+                    strokeWidth={3}
                     fillOpacity={1} 
                     fill="url(#colorCount)" 
                     animationDuration={2500}
                     activeDot={{ 
-                      r: 6, 
+                      r: 5, 
                       fill: "#6366f1", 
                       stroke: "#fff", 
                       strokeWidth: 2,
