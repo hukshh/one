@@ -1,16 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, Cell, PieChart, Pie
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell
 } from "recharts";
-import { TrendingUp, Users, Clock, Video, Loader2, ArrowUpRight, Zap, Target, BrainCircuit } from "lucide-react";
+import { 
+  TrendingUp, Clock, Calendar, Activity, Shield, Info
+} from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
-export function AnalyticsDashboard({ workspaceId, userId }: { workspaceId: string, userId: string }) {
-  const [data, setData] = useState<any>(null);
+/**
+ * UI-LEVEL SAFE DISPLAY HELPERS
+ * 
+ * Ensures no NaN, null, or undefined values leak into the UI.
+ * Strictly enforces "—" for missing data and "0" for zero values.
+ */
+const safeDisplay = (val: any, formatter?: (v: any) => string) => {
+  if (val === 0) return "0";
+  if (!val || isNaN(val)) return "—";
+  return formatter ? formatter(val) : String(val);
+};
+
+const formatDurationUI = (mins: number) => {
+  if (mins < 60) return `${Math.round(mins)}m`;
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
+
+const formatCurrencyUI = (val: number) => {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+};
+
+export function AnalyticsDashboard({ workspaceId, userId }: { workspaceId: string; userId: string }) {
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,8 +47,8 @@ export function AnalyticsDashboard({ workspaceId, userId }: { workspaceId: strin
             "x-user-id": userId,
           },
         });
-        const result = await response.json();
-        setData(result);
+        const data = await response.json();
+        setStats(data);
       } catch (error) {
         console.error("Failed to fetch analytics:", error);
       } finally {
@@ -36,152 +61,126 @@ export function AnalyticsDashboard({ workspaceId, userId }: { workspaceId: strin
     }
   }, [workspaceId, userId]);
 
-  if (loading) {
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-24 text-[#A1A1AA]">
+      <Activity className="h-8 w-8 animate-spin mb-4 text-[#52525B]" />
+      <p className="text-xs font-bold uppercase tracking-widest">Aggregating Intelligence...</p>
+    </div>
+  );
+
+  // EMPTY STATE HANDLER
+  const hasData = stats && stats.totalMeetings > 0;
+
+  if (!hasData) {
     return (
-      <div className="flex h-[400px] items-center justify-center bg-slate-950/40 rounded-[32px] border border-slate-800/40 backdrop-blur-3xl">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
-          <p className="text-slate-500 font-medium animate-pulse">Synthesizing workspace intelligence...</p>
+      <div className="ui-card flex flex-col items-center justify-center py-32 text-center">
+        <div className="p-4 bg-[#1F1F23] rounded-full mb-6">
+          <Info className="h-8 w-8 text-[#A1A1AA]" />
         </div>
+        <h3 className="text-xl font-semibold text-white mb-2">No data available yet</h3>
+        <p className="text-[#A1A1AA] text-sm max-w-xs mx-auto">
+          Upload and process your first meeting to unlock workspace intelligence.
+        </p>
       </div>
     );
   }
 
-  if (!data) return null;
-
-  const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b"];
-
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      {/* Top Hero Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <PremiumStatCard 
-          icon={<Video className="h-5 w-5" />} 
-          label="Intelligence Nodes" 
-          value={data.totals.meetings} 
-          subtext="Total Meetings"
-          color="indigo"
+    <div className="space-y-10">
+      {/* METRIC CARDS - GREY THEME */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard 
+          title="Total Meetings" 
+          value={safeDisplay(stats.totalMeetings)} 
+          icon={<Calendar className="h-4 w-4" />} 
         />
-        <PremiumStatCard 
-          icon={<Clock className="h-5 w-5" />} 
-          label="Execution Time" 
-          value={`${data.totals.durationMinutes}m`} 
-          subtext="Processed Audio"
-          color="emerald"
+        <StatCard 
+          title="Total Duration" 
+          value={safeDisplay(stats.totalDuration, formatDurationUI)} 
+          icon={<Clock className="h-4 w-4" />} 
         />
-        <PremiumStatCard 
-          icon={<BrainCircuit className="h-5 w-5" />} 
-          label="AI Confidence" 
-          value={`${data.totals.avgConfidence}%`} 
-          subtext="Extraction Accuracy"
-          color="purple"
+        <StatCard 
+          title="AI Confidence" 
+          value={safeDisplay(stats.avgConfidence, (v) => `${v}%`)}
+          icon={<Activity className="h-4 w-4" />} 
+          subtitle={stats.avgConfidence === null ? "Processing meetings..." : undefined}
         />
-        <PremiumStatCard 
-          icon={<Target className="h-5 w-5" />} 
-          label="Task Velocity" 
-          value={`${data.totals.taskCompletionRate}%`} 
-          subtext="Completion Rate"
-          color="rose"
+        <StatCard 
+          title="Task Completion" 
+          value={safeDisplay(stats.taskCompletionRate, (v) => `${v}%`)}
+          icon={<TrendingUp className="h-4 w-4" />} 
+          subtitle={stats.taskCompletionRate === null ? "No tasks found" : undefined}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Large Main Chart */}
-        <div className="lg:col-span-2 bg-slate-900/30 border border-slate-800/50 rounded-[40px] p-8 backdrop-blur-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Zap className="h-32 w-32 text-indigo-500" />
+        {/* CHART: MEETING VOLUME */}
+        <div className="ui-card lg:col-span-2">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Meeting Volume</h3>
           </div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-10">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-1">Growth Dynamics</h3>
-                <p className="text-sm text-slate-500">Workspace activity over the last 30 days</p>
-              </div>
-              <div className="flex gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-indigo-500/20" />
-              </div>
-            </div>
-
-            <div className="h-[320px] w-full">
+          <div className="h-[300px] w-full min-h-0">
+            {stats.dailyVolume && stats.dailyVolume.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.timeline} margin={{ top: 10, right: 10, left: -30, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} opacity={0.5} />
+                <BarChart data={stats.dailyVolume}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" vertical={false} />
                   <XAxis 
                     dataKey="date" 
-                    stroke="#475569" 
-                    fontSize={9} 
-                    tickFormatter={(val) => val.split("-").slice(1).join("/")} 
+                    stroke="#52525B" 
+                    fontSize={10} 
+                    tickLine={false} 
                     axisLine={false}
-                    tickLine={false}
-                    dy={10}
-                    minTickGap={30}
+                    tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { weekday: 'short' })}
                   />
-                  <YAxis stroke="#475569" fontSize={9} axisLine={false} tickLine={false} dx={-10} />
+                  <YAxis stroke="#52525B" fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    content={<CustomTooltip />}
-                    cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    cursor={{ fill: '#151518' }}
+                    contentStyle={{ backgroundColor: '#111113', border: '1px solid #1F1F23', borderRadius: '8px' }}
+                    itemStyle={{ color: '#fff', fontSize: '12px' }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#6366f1" 
-                    strokeWidth={3}
-                    fillOpacity={1} 
-                    fill="url(#colorCount)" 
-                    animationDuration={2500}
-                    activeDot={{ 
-                      r: 5, 
-                      fill: "#6366f1", 
-                      stroke: "#fff", 
-                      strokeWidth: 2,
-                      style: { filter: 'drop-shadow(0 0 8px rgba(99, 102, 241, 0.8))' }
-                    }}
-                  />
-                </AreaChart>
+                  <Bar dataKey="count" fill="#6366F1" radius={[2, 2, 0, 0]} barSize={32} />
+                </BarChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Vertical Rankings */}
-        <div className="bg-slate-900/30 border border-slate-800/50 rounded-[40px] p-8 backdrop-blur-2xl">
-          <h3 className="text-xl font-bold text-white mb-6">Top Performers</h3>
-          <div className="space-y-6">
-            {data.topParticipants.map((p: any, i: number) => (
-              <div key={i} className="group relative">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-black border border-slate-700 bg-slate-800 text-slate-300`}>
-                      {i + 1}
-                    </div>
-                    <span className="text-sm font-bold text-slate-300 group-hover:text-indigo-400 transition-colors">{p.name}</span>
-                  </div>
-                  <span className="text-xs font-mono text-slate-500">{p.count} sessions</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{ 
-                      width: `${(p.count / data.topParticipants[0].count) * 100}%`,
-                      backgroundColor: COLORS[i % COLORS.length]
-                    }}
-                  />
-                </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-[#52525B] text-xs uppercase tracking-widest font-bold">
+                Insufficient volume data
               </div>
-            ))}
+            )}
           </div>
+        </div>
 
-          <div className="mt-12 p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 text-center">
-            <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mb-2">System Insight</p>
-            <p className="text-sm text-slate-400 italic">"Your team's collaboration frequency has increased by 14% this week."</p>
+        {/* CHART: SENTIMENT */}
+        <div className="ui-card">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 text-center">Sentiment Analysis</h3>
+          <div className="h-[250px] w-full min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Positive', value: stats.sentiment?.positive || 0 },
+                    { name: 'Neutral', value: stats.sentiment?.neutral || 0 },
+                    { name: 'Critical', value: stats.sentiment?.critical || 0 },
+                  ]}
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={8}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  <Cell fill="#6366F1" />
+                  <Cell fill="#1F1F23" />
+                  <Cell fill="#A1A1AA" />
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#111113', border: '1px solid #1F1F23', borderRadius: '8px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-col gap-3 mt-6">
+            <SentimentIndicator label="Positive" value={stats.sentiment?.positive || 0} color="bg-indigo-500" />
+            <SentimentIndicator label="Neutral" value={stats.sentiment?.neutral || 0} color="bg-[#1F1F23]" />
+            <SentimentIndicator label="Critical" value={stats.sentiment?.critical || 0} color="bg-[#52525B]" />
           </div>
         </div>
       </div>
@@ -189,45 +188,39 @@ export function AnalyticsDashboard({ workspaceId, userId }: { workspaceId: strin
   );
 }
 
-function PremiumStatCard({ icon, label, value, subtext, color }: any) {
-  const colorMap: any = {
-    indigo: "from-indigo-500/20 to-indigo-500/5 border-indigo-500/20 text-indigo-400",
-    emerald: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400",
-    purple: "from-purple-500/20 to-purple-500/5 border-purple-500/20 text-purple-400",
-    rose: "from-rose-500/20 to-rose-500/5 border-rose-500/20 text-rose-400",
-  };
-
+function StatCard({ title, value, icon, subtitle }: any) {
+  const isNoData = value === "—";
+  
   return (
-    <div className={`bg-gradient-to-br ${colorMap[color]} border rounded-[32px] p-7 backdrop-blur-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500`}>
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-3 bg-slate-950/40 rounded-2xl border border-white/5">
-            {icon}
-          </div>
-          <ArrowUpRight className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity" />
+    <div className={`ui-card transition-all duration-300 ${isNoData ? 'opacity-60 border-dashed' : 'opacity-100'}`}>
+      <div className="flex items-center gap-3 mb-4 text-[#A1A1AA]">
+        <div className="p-2 bg-[#151518] rounded-md border border-[#1F1F23]">
+          {React.cloneElement(icon as React.ReactElement, { size: 16, strokeWidth: 1.5 })}
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{label}</p>
-        <h4 className="text-3xl font-black text-white tracking-tight mb-1">{value}</h4>
-        <p className="text-xs font-medium text-slate-500">{subtext}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest">{title}</p>
       </div>
-      <div className="absolute -bottom-6 -right-6 h-24 w-24 rounded-full bg-white/5 blur-3xl group-hover:bg-white/10 transition-colors" />
+      <div className="flex items-baseline gap-2">
+        <p className={`text-2xl font-semibold tracking-tight ${isNoData ? 'text-[#52525B]' : 'text-white'}`}>
+          {value}
+        </p>
+        {(isNoData || subtitle) && (
+          <span className="text-[9px] font-bold text-[#52525B] uppercase tracking-tighter">
+            {subtitle || "Waiting for data"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-950/90 border border-slate-800 p-4 rounded-2xl backdrop-blur-xl shadow-2xl">
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{label}</p>
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-indigo-500" />
-          <p className="text-sm font-bold text-white">
-            {payload[0].value} Intelligence Reports
-          </p>
-        </div>
+function SentimentIndicator({ label, value, color }: any) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className={`h-2 w-2 rounded-full ${color}`} />
+        <span className="text-xs font-bold text-[#A1A1AA] uppercase tracking-tighter">{label}</span>
       </div>
-    );
-  }
-  return null;
+      <span className="text-xs font-bold text-white">{value}%</span>
+    </div>
+  );
 }

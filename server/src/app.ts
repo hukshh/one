@@ -31,8 +31,10 @@ app.get('/health', (req, res) => {
 // Routes
 import meetingRoutes from './routes/meeting.routes';
 import workspaceRoutes from './routes/workspace.routes';
+import userRoutes from './routes/user.routes';
 
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/users', userRoutes);
 
 export default app;

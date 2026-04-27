@@ -146,6 +146,18 @@ export class MeetingController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  updateActionItem = async (req: Request, res: Response) => {
+    try {
+      const { actionItemId } = req.params;
+      const { status } = req.body;
+      const updated = await meetingRepository.updateActionItem(actionItemId, status);
+      res.json(updated);
+    } catch (error) {
+      console.error('Update action item error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
 
 export const meetingController = new MeetingController();

@@ -4,12 +4,18 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { 
-  FileAudio, FileVideo, Plus, Search, Calendar, Users, 
-  CheckCircle2, Loader2, Play, BarChart3, List 
+  FileVideo, Plus, Search, Calendar, Users, 
+  CheckCircle, Loader2, Play, BarChart3, List, ChevronRight, Clock, Shield
 } from "lucide-react";
 import { AnalyticsDashboard } from "../components/AnalyticsDashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+
+const safeDisplay = (val: any) => {
+  if (val === 0) return "0";
+  if (!val || isNaN(val)) return "—";
+  return String(val);
+};
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -113,7 +119,6 @@ export default function DashboardPage() {
       fetchMeetings();
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Failed to upload meeting. Make sure the server is running and the file is valid.");
     } finally {
       setIsUploading(false);
       event.target.value = '';
@@ -122,194 +127,170 @@ export default function DashboardPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
-        <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="text-lg">Synchronizing Environment...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-[#A1A1AA]">
+        <Loader2 className="h-8 w-8 animate-spin mb-4 text-[#52525B]" />
+        <p className="text-xs font-medium uppercase tracking-widest">Synchronizing Environment...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{workspaceName}</h1>
-          <p className="text-slate-400">Real-time intelligence from your team's conversations.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className={`flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            {isUploading ? 'Uploading...' : 'Upload Meeting'}
-            <input 
-              type="file" 
-              className="hidden" 
-              accept="audio/*,video/*" 
-              onChange={handleUpload}
-              disabled={isUploading}
-            />
-          </label>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 mb-8 bg-slate-900/50 p-1 rounded-2xl border border-slate-800 w-fit backdrop-blur-xl">
-        <button 
-          onClick={() => setView("meetings")}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${view === "meetings" ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <List className="h-4 w-4" />
-          Intelligence
-        </button>
-        <button 
-          onClick={() => setView("analytics")}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${view === "analytics" ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <BarChart3 className="h-4 w-4" />
-          Analytics
-        </button>
-      </div>
-
-      {view === "analytics" ? (
-        <AnalyticsDashboard workspaceId={WORKSPACE_ID} userId={USER_ID || ""} />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <StatCard title="Total Meetings" value={meetings.length.toString()} icon={<FileVideo className="h-5 w-5" />} color="indigo" />
-            <StatCard title="Execution Hours" value={(meetings.length * 0.4).toFixed(1)} icon={<Calendar className="h-5 w-5" />} color="emerald" />
-            <StatCard title="Processed" value={meetings.filter(m => m.status === 'PROCESSED').length.toString()} icon={<CheckCircle2 className="h-5 w-5" />} color="amber" />
-            <StatCard title="Contributors" value={session?.user?.name ? "1" : "0"} icon={<Users className="h-5 w-5" />} color="rose" />
+    <div className="bg-[#0A0A0B] min-h-screen">
+      <div className="ui-container py-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div>
+            <h1 className="text-3xl font-semibold text-white tracking-tight mb-2">{workspaceName}</h1>
+            <p className="text-[#A1A1AA] text-sm font-medium">Real-time intelligence from your team's conversations.</p>
           </div>
+          <div className="flex items-center gap-3">
+            <label className={`ui-button-primary flex items-center gap-2 cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {isUploading ? 'Uploading...' : 'Upload Meeting'}
+              <input 
+                type="file" 
+                className="hidden" 
+                accept="audio/*,video/*" 
+                onChange={handleUpload}
+                disabled={isUploading}
+              />
+            </label>
+          </div>
+        </div>
 
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-semibold">Intelligence Feed</h2>
-              <div className="relative flex items-center">
-                <Search className="absolute left-3 h-4 w-4 text-slate-500" />
-                <input 
-                  type="text" 
-                  placeholder="Search meeting memory..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-10 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64"
-                />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    <Plus className="h-4 w-4 rotate-45" />
-                  </button>
+        <div className="flex items-center gap-1 mb-10 bg-[#111113] p-1 rounded-lg border border-[#1F1F23] w-fit">
+          <button 
+            onClick={() => setView("meetings")}
+            className={`flex items-center gap-2 px-6 py-2 rounded-md text-sm font-medium transition-all ${view === "meetings" ? 'bg-[#1F1F23] text-white' : 'text-[#A1A1AA] hover:text-zinc-300'}`}
+          >
+            <List className="h-4 w-4 stroke-[1.5]" />
+            Meetings
+          </button>
+          <button 
+            onClick={() => setView("analytics")}
+            className={`flex items-center gap-2 px-6 py-2 rounded-md text-sm font-medium transition-all ${view === "analytics" ? 'bg-[#1F1F23] text-white' : 'text-[#A1A1AA] hover:text-zinc-300'}`}
+          >
+            <BarChart3 className="h-4 w-4 stroke-[1.5]" />
+            Analytics
+          </button>
+        </div>
+
+        {view === "analytics" ? (
+          <AnalyticsDashboard workspaceId={WORKSPACE_ID} userId={USER_ID || ""} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+              <StatCard title="Meetings" value={safeDisplay(meetings.length)} icon={<Calendar className="h-4 w-4" />} />
+              <StatCard title="Hours Logged" value={safeDisplay(meetings.length > 0 ? (meetings.length * 0.4).toFixed(1) : null) + (meetings.length > 0 ? 'h' : '')} icon={<Clock className="h-4 w-4" />} />
+              <StatCard title="Processed" value={safeDisplay(meetings.filter(m => m.status === 'PROCESSED').length)} icon={<CheckCircle className="h-4 w-4" />} />
+              <StatCard title="Contributors" value={safeDisplay(session?.user?.name ? "1" : "0")} icon={<Users className="h-4 w-4" />} />
+            </div>
+
+            <div className="bg-[#111113] border border-[#1F1F23] rounded-xl overflow-hidden">
+              <div className="p-8 border-b border-[#1F1F23] flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">Intelligence Feed</h2>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#52525B]" />
+                  <input 
+                    type="text" 
+                    placeholder="Search transcripts..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="ui-input pl-10 w-64"
+                  />
+                </div>
+              </div>
+
+              <div className="divide-y divide-[#1F1F23]">
+                {loading && meetings.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-[#A1A1AA]">
+                    <Loader2 className="h-6 w-6 animate-spin mb-4 text-[#52525B]" />
+                    <p className="text-xs font-medium uppercase tracking-wider">Syncing database...</p>
+                  </div>
+                ) : meetings.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-[#52525B]">
+                    <Play className="h-10 w-10 mb-4 opacity-20" />
+                    <p className="text-sm">No meetings found.</p>
+                  </div>
+                ) : (
+                  meetings.map((meeting) => (
+                    <MeetingRow 
+                      key={meeting.id}
+                      id={meeting.id}
+                      title={meeting.title} 
+                      date={new Date(meeting.createdAt).toLocaleDateString()} 
+                      status={meeting.status} 
+                      summary={meeting.summary?.short}
+                      onClick={() => router.push(`/meetings/${meeting.id}`)}
+                    />
+                  ))
                 )}
               </div>
             </div>
-
-            {loading && meetings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-                <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Connecting to database...</p>
-              </div>
-            ) : meetings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
-                <Play className="h-12 w-12 mb-4 opacity-20" />
-                <p>No meetings found. Upload one to start!</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {meetings.map((meeting) => (
-                  <MeetingRow 
-                    key={meeting.id}
-                    id={meeting.id}
-                    title={meeting.title} 
-                    date={new Date(meeting.createdAt).toLocaleDateString()} 
-                    status={meeting.status} 
-                    type="video" 
-                    summary={meeting.summary?.short || "Processing intelligence..."}
-                    onClick={() => router.push(`/meetings/${meeting.id}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function StatCard({ title, value, icon, color = "indigo" }: any) {
-  const colorMap: any = {
-    indigo: "border-indigo-500/20 text-indigo-400 bg-indigo-500/5",
-    emerald: "border-emerald-500/20 text-emerald-400 bg-emerald-500/5",
-    amber: "border-amber-500/20 text-amber-400 bg-amber-500/5",
-    rose: "border-rose-500/20 text-rose-400 bg-rose-500/5",
-  };
-
-  return (
-    <div className={`bg-slate-900/40 border ${colorMap[color]} p-6 rounded-[32px] backdrop-blur-xl group hover:scale-[1.02] transition-all duration-500`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2.5 bg-slate-950/40 rounded-xl border border-white/5 group-hover:scale-110 transition-transform">
-          {icon}
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{title}</span>
-        </div>
+          </>
+        )}
       </div>
-      <h3 className="text-3xl font-black text-white tracking-tight">{value}</h3>
     </div>
   );
 }
 
-function MeetingRow({ id, title, date, status, type, summary, onClick }: any) {
+function StatCard({ title, value, icon }: any) {
+  return (
+    <div className="ui-card">
+      <div className="flex items-center gap-3 mb-4 text-[#A1A1AA]">
+        <div className="p-2 bg-[#151518] rounded-md border border-[#1F1F23]">
+          {icon && (
+            <div className="stroke-[1.5]">
+              {icon}
+            </div>
+          )}
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-widest">{title}</span>
+      </div>
+      <h3 className="text-2xl font-semibold text-white tracking-tight">{value}</h3>
+    </div>
+  );
+}
+
+function MeetingRow({ id, title, date, status, summary, onClick }: any) {
   const isProcessed = status === "PROCESSED";
   const isFailed = status === "FAILED";
   
   return (
     <div 
       onClick={onClick}
-      className="group relative flex items-center gap-6 p-6 rounded-[32px] bg-slate-900/30 border border-slate-800/50 hover:border-indigo-500/30 transition-all duration-500 cursor-pointer backdrop-blur-xl overflow-hidden"
+      className="group flex items-center gap-6 p-6 hover:bg-[#151518] transition-colors cursor-pointer"
     >
-      <div className={`relative z-10 h-16 w-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-        type === 'video' ? 'bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white' : 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-600 group-hover:text-white'
-      }`}>
-        {type === 'video' ? <FileVideo className="h-7 w-7" /> : <FileAudio className="h-7 w-7" />}
-        <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-slate-950 border-2 border-slate-900 flex items-center justify-center">
-          <div className={`h-1.5 w-1.5 rounded-full ${isProcessed ? 'bg-emerald-400 animate-pulse' : isFailed ? 'bg-rose-400' : 'bg-indigo-400 animate-spin'}`} />
-        </div>
+      <div className="h-10 w-10 rounded-lg bg-[#151518] border border-[#1F1F23] flex items-center justify-center text-[#A1A1AA] group-hover:text-white transition-colors">
+        <FileVideo className="h-5 w-5 stroke-[1.5]" />
       </div>
 
-      <div className="flex-1 min-w-0 relative z-10">
-        <div className="flex items-center justify-between mb-1.5">
-          <h4 className="text-lg font-bold text-slate-100 group-hover:text-white transition-colors truncate pr-4">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors truncate">
             {title}
           </h4>
-          <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap bg-slate-950/40 px-2 py-1 rounded-md border border-white/5">
+          <span className="text-[10px] font-medium text-[#52525B] uppercase tracking-wider">
             {date}
           </span>
         </div>
-        <p className="text-sm text-slate-400 line-clamp-1 group-hover:text-slate-300 transition-colors mb-3">
-          {summary || "AI is currently extracting organizational memory from this session..."}
+        <p className="text-xs text-[#A1A1AA] line-clamp-1 mb-2 font-medium">
+          {summary || "AI is currently extracting organizational memory..."}
         </p>
         
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${
-            isProcessed ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
-            isFailed ? 'bg-rose-500/5 text-rose-400 border-rose-500/20' :
+          <div className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+            isProcessed ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/10' : 
+            isFailed ? 'bg-rose-500/5 text-rose-500 border-rose-500/10' :
             'bg-indigo-500/5 text-indigo-400 border-indigo-500/20'
           }`}>
-            <div className={`h-1.5 w-1.5 rounded-full ${isProcessed ? 'bg-emerald-400' : isFailed ? 'bg-rose-400' : 'bg-indigo-400'}`} />
+            <div className={`h-1 w-1 rounded-full ${isProcessed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-indigo-500'}`} />
             {status}
           </div>
-          <div className="h-1 w-1 rounded-full bg-slate-800" />
-          <span className="text-[10px] text-slate-500 font-medium">Memory Node #{id.slice(-4)}</span>
+          <span className="text-[10px] text-[#2D2D33] font-medium tracking-tighter">ID: {id.slice(-6)}</span>
         </div>
       </div>
 
-      <div className="relative z-10 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
-        <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-          <Play className="h-4 w-4 text-white fill-white" />
-        </div>
-      </div>
-
-      <div className="absolute top-0 right-0 h-32 w-32 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+      <ChevronRight className="h-4 w-4 text-[#2D2D33] group-hover:text-[#A1A1AA] group-hover:translate-x-1 transition-all" />
     </div>
   );
 }

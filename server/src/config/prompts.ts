@@ -22,14 +22,21 @@ export const PROMPTS = {
           "task": "description",
           "owner": "name or unknown",
           "priority": "low|medium|high",
-          "deadline": "ISO date or null"
+          "deadline": "ISO date or null",
+          "confidence": 0.95
         }
       ],
-      "decisions": ["decision 1", "decision 2"],
+      "decisions": [
+        {
+          "content": "decision text",
+          "confidence": 0.98
+        }
+      ],
       "risks": [
         {
           "risk": "description",
-          "severity": "low|medium|high"
+          "severity": "low|medium|high",
+          "confidence": 0.85
         }
       ]
     }

@@ -163,12 +163,17 @@ export class AIService {
       task: z.string(),
       owner: z.string().optional(),
       priority: z.enum(['low', 'medium', 'high', 'LOW', 'MEDIUM', 'HIGH']).transform(v => v.toUpperCase()),
-      deadline: z.string().optional().nullable()
+      deadline: z.string().optional().nullable(),
+      confidence: z.number().optional().default(0.9)
     })),
-    decisions: z.array(z.string()),
+    decisions: z.array(z.object({
+      content: z.string(),
+      confidence: z.number().optional().default(0.9)
+    })),
     risks: z.array(z.object({
       risk: z.string(),
-      severity: z.enum(['low', 'medium', 'high', 'LOW', 'MEDIUM', 'HIGH']).transform(v => v.toUpperCase())
+      severity: z.enum(['low', 'medium', 'high', 'LOW', 'MEDIUM', 'HIGH']).transform(v => v.toUpperCase()),
+      confidence: z.number().optional().default(0.9)
     }))
   });
 
@@ -179,12 +184,17 @@ export class AIService {
       task: z.string(),
       owner: z.string().optional(),
       priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
-      deadline: z.string().optional()
+      deadline: z.string().optional(),
+      confidence: z.number().optional().default(0.9)
     })),
-    decisions: z.array(z.string()),
+    decisions: z.array(z.object({
+      content: z.string(),
+      confidence: z.number().optional().default(0.9)
+    })),
     risks: z.array(z.object({
       risk: z.string(),
-      severity: z.enum(['LOW', 'MEDIUM', 'HIGH'])
+      severity: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+      confidence: z.number().optional().default(0.9)
     }))
   });
 

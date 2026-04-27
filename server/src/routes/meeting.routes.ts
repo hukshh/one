@@ -27,5 +27,6 @@ router.get('/', meetingController.list);
 router.get('/:id', meetingController.getById);
 router.get('/:id/export/pdf', meetingController.exportPdf);
 router.post('/:id/chat', meetingController.chat);
+router.patch('/action-items/:actionItemId', meetingController.updateActionItem);
 
 export default router;

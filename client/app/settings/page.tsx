@@ -103,45 +103,47 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
-        <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="text-lg">Loading settings...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-[#A1A1AA]">
+        <Loader2 className="h-8 w-8 animate-spin mb-4 text-indigo-500" />
+        <p className="text-sm font-medium">Loading settings...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-4xl">
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Workspace Settings</h1>
-        <p className="text-slate-400">Manage your team, branding, and workspace configuration.</p>
+    <div className="ui-container py-12">
+      <div className="mb-12">
+        <h1 className="text-3xl font-semibold tracking-tight mb-2 text-white">Workspace Settings</h1>
+        <p className="text-[#A1A1AA] text-sm">Manage team members, workspace identity, and configuration.</p>
       </div>
 
       {message && (
-        <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3 text-emerald-400">
-          <CheckCircle2 className="h-5 w-5" />
+        <div className="mb-8 p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex items-center gap-3 text-indigo-400">
+          <CheckCircle2 className="h-4 w-4" />
           <p className="text-sm font-medium">{message}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
         {/* Left Column: Forms */}
-        <div className="md:col-span-2 space-y-8">
+        <div className="md:col-span-2 space-y-10">
           {/* General Settings */}
-          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
-            <div className="flex items-center gap-2 mb-6">
-              <Building2 className="h-5 w-5 text-indigo-400" />
-              <h2 className="text-xl font-semibold">General</h2>
+          <section className="ui-card">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2 bg-[#1F1F23] rounded-lg">
+                <Building2 className="h-4 w-4 text-[#A1A1AA]" />
+              </div>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-[#A1A1AA]">General</h2>
             </div>
             
-            <form onSubmit={handleUpdateWorkspace} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Workspace Name</label>
+            <form onSubmit={handleUpdateWorkspace} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#52525B] uppercase tracking-widest ml-1">Workspace Name</label>
                 <input 
                   type="text" 
                   value={workspaceName}
                   onChange={(e) => setWorkspaceName(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                  className="ui-input w-full"
                   placeholder="e.g. Acme Corp"
                 />
               </div>
@@ -149,7 +151,7 @@ export default function SettingsPage() {
                 <button 
                   type="submit"
                   disabled={updating}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/20"
+                  className="ui-button-primary flex items-center gap-2"
                 >
                   {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Save Changes
@@ -159,30 +161,32 @@ export default function SettingsPage() {
           </section>
 
           {/* Team Members */}
-          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-emerald-400" />
-                <h2 className="text-xl font-semibold">Team Members</h2>
+          <section className="ui-card">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#1F1F23] rounded-lg">
+                  <Users className="h-4 w-4 text-[#A1A1AA]" />
+                </div>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-[#A1A1AA]">Team Members</h2>
               </div>
-              <span className="text-xs font-medium text-slate-500 bg-slate-800 px-2 py-1 rounded-full">
+              <span className="ui-badge">
                 {workspace?.users?.length || 0} Members
               </span>
             </div>
 
-            <div className="space-y-4 mb-8">
+            <div className="space-y-3 mb-10">
               {workspace?.users?.map((user: any) => (
-                <div key={user.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-slate-400 font-bold border border-slate-600">
+                <div key={user.id} className="flex items-center justify-between p-4 rounded-xl bg-[#0D0D0F] border border-[#1F1F23]">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-[#1F1F23] flex items-center justify-center text-[#A1A1AA] font-bold text-xs border border-[#2D2D33]">
                       {user.fullName?.[0] || user.email?.[0].toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-200">{user.fullName || "Unnamed User"}</p>
-                      <p className="text-xs text-slate-500">{user.email}</p>
+                      <p className="text-sm font-semibold text-white">{user.fullName || "Unnamed User"}</p>
+                      <p className="text-xs text-[#52525B]">{user.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20">
+                  <div className="flex items-center gap-2 px-2.5 py-0.5 bg-indigo-500/5 rounded border border-indigo-500/10">
                     <Shield className="h-3 w-3 text-indigo-400" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">{user.role || 'Member'}</span>
                   </div>
@@ -190,21 +194,21 @@ export default function SettingsPage() {
               ))}
             </div>
 
-            <div className="pt-6 border-t border-slate-800">
-              <h3 className="text-sm font-semibold mb-4 text-slate-300">Invite new member</h3>
+            <div className="pt-10 border-t border-[#1F1F23]">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#52525B] mb-4">Invite new member</h3>
               <form onSubmit={handleInvite} className="flex gap-3">
                 <input 
                   type="email" 
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
+                  className="ui-input flex-1"
                   placeholder="teammate@example.com"
                   required
                 />
                 <button 
                   type="submit"
                   disabled={inviting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-slate-100 hover:bg-white text-slate-950 disabled:opacity-50 rounded-xl font-bold transition-all shadow-lg shadow-white/5"
+                  className="ui-button-primary flex items-center gap-2"
                 >
                   {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   Invite
@@ -216,17 +220,17 @@ export default function SettingsPage() {
 
         {/* Right Column: Identity */}
         <div className="space-y-6">
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl">
-            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Workspace Identity</h4>
-            <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 mb-4">
-              <p className="text-[10px] font-mono text-slate-400 break-all leading-relaxed">
+          <div className="ui-card">
+            <h4 className="text-[10px] font-bold text-[#52525B] uppercase tracking-[0.2em] mb-6">Workspace Identity</h4>
+            <div className="bg-[#0D0D0F] border border-[#1F1F23] rounded-xl p-4 mb-6">
+              <p className="text-[10px] font-mono text-[#A1A1AA] break-all leading-relaxed">
                 {WORKSPACE_ID}
               </p>
             </div>
             <button 
               onClick={copyWorkspaceId}
-              className={`w-full py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                copied ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              className={`w-full py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                copied ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10' : 'bg-[#1F1F23] text-[#A1A1AA] border-[#2D2D33] hover:bg-[#2D2D33]'
               }`}
             >
               {copied ? 'Identity Copied!' : 'Copy Workspace ID'}

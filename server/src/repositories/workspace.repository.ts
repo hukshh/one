@@ -74,81 +74,85 @@ export class WorkspaceRepository {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const meetings = await prisma.meeting.findMany({
+    // Fetch ALL meetings for the workspace to ensure totals match the intelligence feed
+    const allMeetings = await prisma.meeting.findMany({
       where: {
         workspaceId,
-        createdAt: { gte: thirtyDaysAgo },
       },
       include: {
         participants: true,
         summary: true,
         actionItems: true,
+        decisions: true,
+        risks: true
       }
     });
 
-    // 1. Totals & Averages
-    const totalMeetings = meetings.length;
-    const totalDuration = meetings.reduce((acc, m) => acc + (m.duration || 0), 0);
+    const processedMeetings = allMeetings.filter(m => m.status === 'PROCESSED');
+    const recentMeetings = allMeetings.filter(m => m.createdAt >= thirtyDaysAgo);
+
+    // 1. Totals & Averages (Global)
+    const totalMeetings = allMeetings.length;
+    const totalDurationMinutes = allMeetings.reduce((acc, m) => acc + (m.duration || 0), 0);
     
-    // Calculate Average Confidence from Action Items
+    // Calculate Average Confidence across all intelligence (AI quality score)
     let totalConfidence = 0;
     let confidenceCount = 0;
-    meetings.forEach(m => {
-      m.actionItems.forEach(ai => {
-        if (ai.confidence) {
-          totalConfidence += ai.confidence;
-          confidenceCount++;
-        }
+    
+    processedMeetings.forEach(m => {
+      [...m.actionItems, ...m.decisions, ...m.risks].forEach(item => {
+        // Fallback to 0.9 for existing/legacy data that lacks a confidence score
+        const score = item.confidence ?? 0.9;
+        totalConfidence += score;
+        confidenceCount++;
       });
     });
-    const avgConfidence = confidenceCount > 0 ? (totalConfidence / confidenceCount) * 100 : 92;
+    
+    const avgConfidence = confidenceCount > 0 ? Math.round((totalConfidence / confidenceCount) * 100) : null;
 
-    // 2. Timeline (Fill gaps for all 30 days)
+    // 2. Timeline (Daily Volume - 30 Day Window)
     const timeline: Record<string, number> = {};
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       timeline[d.toISOString().split('T')[0]] = 0;
     }
-    meetings.forEach(m => {
+    recentMeetings.forEach(m => {
       const date = m.createdAt.toISOString().split('T')[0];
       if (timeline[date] !== undefined) timeline[date]++;
     });
 
-    // 3. Top Participants
-    const participantCounts: Record<string, number> = {};
-    meetings.forEach(m => {
-      m.participants.forEach(p => {
-        const key = p.name || p.email;
-        participantCounts[key] = (participantCounts[key] || 0) + 1;
-      });
-    });
-
-    const topParticipants = Object.entries(participantCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-
-    // 4. Task Completion Rate
+    // 3. Task Completion Rate
     let totalTasks = 0;
     let completedTasks = 0;
-    meetings.forEach(m => {
+    allMeetings.forEach(m => {
       m.actionItems.forEach(ai => {
         totalTasks++;
         if (ai.status === 'COMPLETED') completedTasks++;
       });
     });
-    const taskCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 85;
+    const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : null;
+
+    // 4. Sentiment (Proxy based on Decisions/Risks ratio)
+    const totalDecisions = allMeetings.reduce((acc, m) => acc + m.decisions.length, 0);
+    const totalRisks = allMeetings.reduce((acc, m) => acc + m.risks.length, 0);
+    const totalActionItems = allMeetings.reduce((acc, m) => acc + m.actionItems.length, 0);
+    
+    const totalSignals = totalDecisions + totalRisks + totalActionItems;
+    const sentiment = {
+      positive: totalSignals > 0 ? Math.round((totalDecisions / totalSignals) * 100) : 0,
+      neutral: totalSignals > 0 ? Math.round((totalActionItems / totalSignals) * 100) : 0,
+      critical: totalSignals > 0 ? Math.round((totalRisks / totalSignals) * 100) : 0,
+    };
 
     return {
-      totals: {
-        meetings: totalMeetings,
-        durationMinutes: Math.round(totalDuration / 60),
-        avgConfidence: Math.round(avgConfidence),
-        taskCompletionRate: Math.round(taskCompletionRate),
-      },
-      timeline: Object.entries(timeline).map(([date, count]) => ({ date, count })),
-      topParticipants,
+      totalMeetings,
+      totalDuration: totalDurationMinutes,
+      avgConfidence,
+      taskCompletionRate,
+      dailyVolume: Object.entries(timeline).map(([date, count]) => ({ date, count })),
+      sentiment,
+      topParticipants: [], 
     };
   }
 }

@@ -121,7 +121,8 @@ export class MeetingRepository {
             priority: ['LOW', 'MEDIUM', 'HIGH'].includes(String(item.priority).toUpperCase()) 
               ? (String(item.priority).toUpperCase() as any) 
               : 'MEDIUM',
-            deadline: isValidDate ? d : null
+            deadline: isValidDate ? d : null,
+            confidence: Number(item.confidence) || 0.9
           };
         })
       }));
@@ -131,7 +132,8 @@ export class MeetingRepository {
       operations.push(prisma.decision.createMany({
         data: decisions.map((d: any) => ({
           meetingId,
-          content: typeof d === 'string' ? d : JSON.stringify(d)
+          content: d.content || (typeof d === 'string' ? d : JSON.stringify(d)),
+          confidence: Number(d.confidence) || 0.9
         }))
       }));
     }
@@ -143,12 +145,26 @@ export class MeetingRepository {
           content: r.risk || r.content || 'No description provided',
           severity: ['LOW', 'MEDIUM', 'HIGH'].includes(String(r.severity || r.priority).toUpperCase()) 
             ? (String(r.severity || r.priority).toUpperCase() as any) 
-            : 'MEDIUM'
+            : 'MEDIUM',
+          confidence: Number(r.confidence) || 0.9
         }))
       }));
     }
     
     await prisma.$transaction(operations);
+  }
+
+  async updateActionItem(id: string, status: string): Promise<any> {
+    console.log(`📝 Updating ActionItem ${id} to status: ${status}`);
+    try {
+      return await prisma.actionItem.update({
+        where: { id },
+        data: { status: status as any }
+      });
+    } catch (err: any) {
+      console.error(`❌ ActionItem update failed for ID ${id}:`, err.message);
+      throw err;
+    }
   }
 }
 
