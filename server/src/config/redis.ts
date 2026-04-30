@@ -3,15 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null,
-  retryStrategy: (times: number) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-};
+const redisConfig = process.env.REDIS_URL 
+  ? process.env.REDIS_URL 
+  : {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD || undefined,
+      maxRetriesPerRequest: null,
+      retryStrategy: (times: number) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+    };
 
 // Enabled Redis for background processing
 export const redisConnection = new Redis(redisConfig); 

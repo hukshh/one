@@ -4,6 +4,24 @@ import prisma from '../lib/prisma';
 import { EmailService } from '../services/email.service';
 
 export class WorkspaceController {
+  register = async (req: Request, res: Response) => {
+    try {
+      const { email, name, workspaceName } = req.body;
+      if (!email || !name || !workspaceName) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const result = await workspaceRepository.register({ email, name, workspaceName });
+      res.status(201).json(result);
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      if (error.code === 'P2002') {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
   getById = async (req: Request, res: Response) => {
     try {
       const workspaceId = (req.headers['x-workspace-id'] as string) || req.params.id;

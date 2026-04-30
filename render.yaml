@@ -1,0 +1,79 @@
+services:
+  # 1. API Service (Backend)
+  - type: web
+    name: meetingmind-api
+    env: node
+    rootDir: server
+    buildCommand: npm install && npm run prisma:generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false # User must provide this (MongoDB Atlas)
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: meetingmind-redis
+          property: connectionString
+      - key: APP_URL
+        fromContext: instanceUrl
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+  # 2. Worker Service (Background Jobs)
+  - type: worker
+    name: meetingmind-worker
+    env: node
+    rootDir: server
+    buildCommand: npm install && npm run prisma:generate && npm run build
+    startCommand: node dist/jobs/meeting.worker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: meetingmind-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+  # 3. Client Service (Frontend)
+  - type: web
+    name: meetingmind-client
+    env: node
+    rootDir: client
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: meetingmind-api
+          property: url
+        suffix: /api
+      - key: AUTH_URL
+        fromContext: instanceUrl
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AUTH_TRUST_HOST
+        value: "true"
+      - key: DATABASE_URL
+        sync: false # Required for NextAuth Prisma Adapter
+
+# 4. Redis instance for BullMQ
+redis:
+  name: meetingmind-redis
+  plan: free
+  ipAllowList: [] # Only allow internal connections

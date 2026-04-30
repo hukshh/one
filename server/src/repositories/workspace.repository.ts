@@ -2,6 +2,30 @@ import { Workspace } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 export class WorkspaceRepository {
+  async register(data: { email: string; name: string; workspaceName: string }) {
+    const slug = data.workspaceName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    
+    return prisma.$transaction(async (tx) => {
+      const workspace = await tx.workspace.create({
+        data: {
+          name: data.workspaceName,
+          slug: `${slug}-${Math.random().toString(36).substring(2, 7)}`,
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          fullName: data.name,
+          role: 'owner',
+          workspaceId: workspace.id,
+        },
+      });
+
+      return { workspace, user };
+    });
+  }
+
   async findById(id: string): Promise<Workspace | null> {
     return prisma.workspace.findUnique({
       where: { id },

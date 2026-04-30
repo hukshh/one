@@ -5,6 +5,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 const router = Router();
 
 // Public routes for onboarding
+router.post('/register', workspaceController.register);
 router.get('/invitations/:token', workspaceController.validateInvitation);
 router.post('/join', workspaceController.join);
 
