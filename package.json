@@ -1,15 +1,16 @@
 {
-  "name": "meetingmind",
+  "name": "meetingmind-monolith",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
-    "server": "cd server && NODE_OPTIONS='--max-old-space-size=2048' npm run dev",
-    "client": "cd client && NODE_OPTIONS='--max-old-space-size=2048' npm run dev",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "install:all": "npm install --workspace=client --workspace=server",
+    "build:server": "npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "build": "npm run build:server && npm run build:client",
+    "start": "npm run start --workspace=server"
   }
 }
