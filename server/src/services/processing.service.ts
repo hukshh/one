@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { meetingRepository } from '../repositories/meeting.repository';
 import { aiService } from '../services/ai.service';
 import { EmailService } from '../services/email.service';

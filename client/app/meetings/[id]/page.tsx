@@ -44,8 +44,8 @@ export default function MeetingDetail() {
       try {
         const response = await fetch(`${API_URL}/meetings/${id}`, {
           headers: {
-            "x-workspace-id": WORKSPACE_ID,
-            "x-user-id": USER_ID,
+            "x-workspace-id": String(WORKSPACE_ID || ""),
+            "x-user-id": String(USER_ID || ""),
           },
         });
         const data = await response.json();
@@ -84,8 +84,8 @@ export default function MeetingDetail() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-workspace-id': WORKSPACE_ID,
-          'x-user-id': USER_ID,
+          'x-workspace-id': String(WORKSPACE_ID || ""),
+          'x-user-id': String(USER_ID || ""),
         },
         body: JSON.stringify({ message: chatInput }),
       });
@@ -113,8 +113,8 @@ export default function MeetingDetail() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': USER_ID || '',
-          'x-workspace-id': WORKSPACE_ID || '',
+          'x-user-id': String(USER_ID || ''),
+          'x-workspace-id': String(WORKSPACE_ID || ''),
         },
         body: JSON.stringify({
           meetingId: id,
@@ -179,8 +179,8 @@ export default function MeetingDetail() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-workspace-id': WORKSPACE_ID,
-          'x-user-id': USER_ID,
+          'x-workspace-id': String(WORKSPACE_ID || ""),
+          'x-user-id': String(USER_ID || ""),
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -488,7 +488,7 @@ function IntelligenceSection({ title, icon, items, onTaskToggle }: any) {
     <div className="ui-card p-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-[#151518] rounded-md border border-[#1F1F23]">
-          {icon && React.cloneElement(icon as React.ReactElement, { size: 16, strokeWidth: 1.5, className: "text-[#A1A1AA]" })}
+          {icon && React.cloneElement(icon as React.ReactElement<any>, { size: 16, strokeWidth: 1.5, className: "text-[#A1A1AA]" })}
         </div>
         <h3 className="font-semibold text-[10px] uppercase tracking-widest text-[#A1A1AA]">{title}</h3>
       </div>

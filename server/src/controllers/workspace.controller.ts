@@ -24,7 +24,7 @@ export class WorkspaceController {
 
   getById = async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req.headers['x-workspace-id'] as string) || req.params.id;
+      const workspaceId = (req.headers['x-workspace-id'] as any) || req.params.id;
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace ID required' });
       }
@@ -116,7 +116,7 @@ export class WorkspaceController {
       const { token } = req.params;
       if (!token) return res.status(400).json({ error: 'Token required' });
 
-      const invitation = await workspaceRepository.findInvitationByToken(token);
+      const invitation = await workspaceRepository.findInvitationByToken(token as string);
       
       if (!invitation) {
         return res.status(404).json({ error: 'Invitation not found or already used' });

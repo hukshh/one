@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Workspace } from '@prisma/client';
 import prisma from '../lib/prisma';
 

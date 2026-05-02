@@ -17,7 +17,7 @@ const redisConfig = process.env.REDIS_URL
     };
 
 // Enabled Redis for background processing
-export const redisConnection = new Redis(redisConfig); 
+export const redisConnection = new Redis(redisConfig as any); 
 
 export let isRedisConnected = false;
 

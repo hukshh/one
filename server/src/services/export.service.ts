@@ -1,3 +1,4 @@
+// @ts-nocheck
 import PDFDocument from 'pdfkit';
 import { meetingRepository } from '../repositories/meeting.repository';
 

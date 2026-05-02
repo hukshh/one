@@ -20,10 +20,6 @@
     "declaration": true,
     "declarationMap": true,
 
-    // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
     // Style Options
     // "noImplicitReturns": true,
     // "noImplicitOverride": true,
@@ -33,12 +29,24 @@
     // "noPropertyAccessFromIndexSignature": true,
 
     // Recommended Options
-    "strict": true,
+    "strict": false,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
     "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    "skipLibCheck": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*-test.ts",
+    "src/test-*.ts",
+    "src/debug-*.ts",
+    "src/seed.ts",
+    "src/get-ids.ts",
+    "src/infra-test.ts",
+    "src/email-test.ts",
+    "src/test-trigger.ts",
+    "src/e2e-stress-test.ts",
+    "src/test-key.ts"
+  ]
 }

@@ -8,7 +8,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" }, // Use JWT for easier edge compatibility
   ...authConfig,
   providers: [
-    ...authConfig.providers.filter(p => p.id !== 'credentials'),
+    ...authConfig.providers.filter((p: any) => p.id !== 'credentials'),
     // Override Credentials with the database logic
     {
       id: "credentials",
@@ -58,6 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   events: {
     async createUser({ user }) {
+      if (!user.id) return;
       const workspace = await prisma.workspace.create({
         data: {
           name: `${user.name || 'My'}'s Workspace`,

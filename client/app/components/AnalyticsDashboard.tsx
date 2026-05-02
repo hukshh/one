@@ -195,7 +195,7 @@ function StatCard({ title, value, icon, subtitle }: any) {
     <div className={`ui-card transition-all duration-300 ${isNoData ? 'opacity-60 border-dashed' : 'opacity-100'}`}>
       <div className="flex items-center gap-3 mb-4 text-[#A1A1AA]">
         <div className="p-2 bg-[#151518] rounded-md border border-[#1F1F23]">
-          {React.cloneElement(icon as React.ReactElement, { size: 16, strokeWidth: 1.5 })}
+          {React.cloneElement(icon as React.ReactElement<any>, { size: 16, strokeWidth: 1.5 })}
         </div>
         <p className="text-[10px] font-bold uppercase tracking-widest">{title}</p>
       </div>
