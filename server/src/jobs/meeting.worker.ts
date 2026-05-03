@@ -2,48 +2,39 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { Worker, Job } from 'bullmq';
-import { redisConnection } from '../config/redis';
+import { redisOptions } from '../config/redis';
 import { MEETING_QUEUE_NAME } from '../services/queue.service';
 import { ProcessingService } from '../services/processing.service';
 
-export let meetingWorker: Worker | null = null;
+export const meetingWorker = new Worker(
+  MEETING_QUEUE_NAME,
+  async (job: Job) => {
+    const { meetingId, fileUrl, storageKey } = job.data;
+    await ProcessingService.process(meetingId, fileUrl, storageKey, job.id);
+  },
+  {
+    connection: redisOptions as any,
+    concurrency: 2,
+  }
+);
 
-if (redisConnection) {
-  meetingWorker = new Worker(
-    MEETING_QUEUE_NAME,
-    async (job: Job) => {
-      const { meetingId, fileUrl, storageKey } = job.data;
-      await ProcessingService.process(meetingId, fileUrl, storageKey, job.id);
-    },
-    {
-      connection: redisConnection,
-      concurrency: 2,
-    }
-  );
+meetingWorker.on('completed', (job) => {
+  console.log(`✅ Job ${job.id} completed`);
+});
 
-  meetingWorker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} completed`);
-  });
+meetingWorker.on('failed', (job, err) => {
+  console.error(`❌ Job ${job?.id} failed: ${err.message}`);
+});
 
-  meetingWorker.on('failed', (job, err) => {
-    console.error(`❌ Job ${job?.id} failed: ${err.message}`);
-  });
+console.log('🚀 MeetingMind Worker started and listening for jobs...');
 
-  console.log('🚀 MeetingMind Worker started and listening for jobs...');
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  await meetingWorker.close();
+  process.exit(0);
+});
 
-  // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    console.log('SIGTERM received — closing worker...');
-    await meetingWorker?.close();
-    process.exit(0);
-  });
-
-  process.on('SIGINT', async () => {
-    console.log('SIGINT received — closing worker...');
-    await meetingWorker?.close();
-    process.exit(0);
-  });
-} else {
-  console.error('[Worker] Redis unavailable. Worker cannot start without Redis.');
-  process.exit(1);
-}
+process.on('SIGINT', async () => {
+  await meetingWorker.close();
+  process.exit(0);
+});
