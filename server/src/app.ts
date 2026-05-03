@@ -11,8 +11,24 @@ dotenv.config();
 const app = express();
 
 app.use(helmet());
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(u => u.trim().replace(/\/$/, ''))
+  : [];
+
+console.log('[CORS] Allowed origins:', allowedOrigins.length ? allowedOrigins : 'ALL (no FRONTEND_URL set)');
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : true,
+  origin: (origin, callback) => {
+    // Allow server-to-server requests (no origin header)
+    if (!origin) return callback(null, true);
+    // Allow all if no FRONTEND_URL configured
+    if (allowedOrigins.length === 0) return callback(null, true);
+    // Exact match (trailing slashes already stripped)
+    if (allowedOrigins.includes(origin.replace(/\/$/, ''))) return callback(null, true);
+    // Deny
+    console.error(`[CORS] Blocked origin: ${origin}`);
+    return callback(new Error('CORS: Origin not allowed'));
+  },
   credentials: true
 }));
 app.use(express.json());
