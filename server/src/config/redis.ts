@@ -3,36 +3,46 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const redisConfig = process.env.REDIS_URL 
-  ? process.env.REDIS_URL 
-  : {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null,
-      retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-    };
+// Build connection config — supports both local Redis and Upstash (TLS/rediss://)
+const getRedisConfig = () => {
+  const url = process.env.REDIS_URL;
 
-// Enabled Redis for background processing
-export const redisConnection = new Redis(redisConfig as any); 
+  if (url) {
+    // Upstash uses rediss:// (TLS) — ioredis needs tls option enabled
+    if (url.startsWith('rediss://')) {
+      return {
+        url,
+        tls: { rejectUnauthorized: false },
+        maxRetriesPerRequest: null,
+        retryStrategy: (times: number) => Math.min(times * 100, 3000),
+      };
+    }
+    // Plain redis:// URL (local or Render internal)
+    return url;
+  }
+
+  // Fallback: host/port config for local dev without REDIS_URL
+  return {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD || undefined,
+    maxRetriesPerRequest: null,
+    retryStrategy: (times: number) => Math.min(times * 100, 3000),
+  };
+};
+
+export const redisConnection = new Redis(getRedisConfig() as any);
 
 export let isRedisConnected = false;
 
-if (redisConnection) {
-  redisConnection.on('error', (err: any) => {
-    isRedisConnected = false;
-    if (err.code === 'ECONNREFUSED') {
-      // Silent in logs, but status is updated
-    } else {
-      console.error('Redis connection error:', err);
-    }
-  });
+redisConnection.on('error', (err: any) => {
+  isRedisConnected = false;
+  if (err.code !== 'ECONNREFUSED') {
+    console.error('Redis connection error:', err.message);
+  }
+});
 
-  redisConnection.on('connect', () => {
-    isRedisConnected = true;
-    console.log('✅ Connected to Redis');
-  });
-}
+redisConnection.on('connect', () => {
+  isRedisConnected = true;
+  console.log('✅ Connected to Redis');
+});
