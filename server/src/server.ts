@@ -1,3 +1,9 @@
+// Polyfill File global for Node < 20 (Render free tier runs Node 18)
+import { File as NodeFile } from 'node:buffer';
+if (!globalThis.File) {
+  (globalThis as any).File = NodeFile;
+}
+
 import app from './app';
 import './jobs/meeting.worker'; // Worker runs in same process (free tier)
 
