@@ -1,4 +1,5 @@
 import app from './app';
+import './jobs/meeting.worker'; // Worker runs in same process (free tier)
 
 const PORT = Number(process.env.PORT) || 4000;
 
