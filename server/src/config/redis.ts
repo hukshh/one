@@ -25,7 +25,7 @@ redisConnection.on('error', (err: any) => {
   }
 });
 
-redisConnection.on('connect', () => {
+redisConnection.on('ready', () => {
   isRedisConnected = true;
   console.log('✅ Connected to Redis');
 });
