@@ -1,72 +1,96 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
+import { Readable } from 'stream';
 import fs from 'fs';
-import path from 'path';
+
+let bucket: GridFSBucket | null = null;
+let client: MongoClient | null = null;
+
+async function getBucket(): Promise<GridFSBucket> {
+  if (bucket) return bucket;
+
+  const uri = process.env.DATABASE_URL;
+  if (!uri) throw new Error('DATABASE_URL is not set');
+
+  client = new MongoClient(uri);
+  await client.connect();
+
+  const dbName = new URL(uri.replace('mongodb+srv://', 'https://')).pathname.replace('/', '').split('?')[0];
+  const db = client.db(dbName || 'meetingmind');
+  bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+
+  return bucket;
+}
 
 export class StorageService {
-  private static s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    },
-  });
-
-  private static bucketName = process.env.AWS_BUCKET_NAME || '';
-
   /**
-   * Uploads a local file to S3
+   * Upload a local file to MongoDB GridFS.
+   * Returns the GridFS file ID (used as storageKey).
    */
-  static async uploadFile(localPath: string, fileName: string): Promise<string> {
-    const fileStream = fs.createReadStream(localPath);
-    const key = `meetings/${Date.now()}-${fileName}`;
-
-    const command = new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      Body: fileStream,
-      ContentType: this.getContentType(fileName),
+  static async uploadFile(localPath: string, filename: string): Promise<string> {
+    const bucket = await getBucket();
+    const readStream = fs.createReadStream(localPath);
+    const uploadStream = bucket.openUploadStream(filename, {
+      metadata: { uploadedAt: new Date() },
     });
 
-    await this.s3Client.send(command);
-    return key;
-  }
-
-  /**
-   * Generates a presigned URL for a file in S3
-   * Valid for 1 hour by default
-   */
-  static async getPresignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
-    const command = new GetObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
+    await new Promise<void>((resolve, reject) => {
+      readStream.pipe(uploadStream);
+      uploadStream.on('finish', resolve);
+      uploadStream.on('error', reject);
+      readStream.on('error', reject);
     });
 
-    return getSignedUrl(this.s3Client, command, { expiresIn });
+    return uploadStream.id.toString(); // Return GridFS file _id as string
   }
 
   /**
-   * Helper to determine content type based on extension
+   * Download a file from GridFS as a Buffer.
    */
-  private static getContentType(fileName: string): string {
-    const ext = path.extname(fileName).toLowerCase();
-    switch (ext) {
-      case '.mp3': return 'audio/mpeg';
-      case '.wav': return 'audio/wav';
-      case '.mp4': return 'video/mp4';
-      case '.mov': return 'video/quicktime';
-      default: return 'application/octet-stream';
-    }
+  static async downloadFile(storageKey: string): Promise<Buffer> {
+    const bucket = await getBucket();
+    const fileId = new ObjectId(storageKey);
+    const downloadStream = bucket.openDownloadStream(fileId);
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      downloadStream.on('data', (chunk) => chunks.push(chunk));
+      downloadStream.on('end', () => resolve(Buffer.concat(chunks)));
+      downloadStream.on('error', reject);
+    });
   }
 
   /**
-   * Check if S3 is configured
+   * Get a readable stream for a GridFS file (for streaming to Groq Whisper).
+   */
+  static async getDownloadStream(storageKey: string): Promise<Readable> {
+    const bucket = await getBucket();
+    const fileId = new ObjectId(storageKey);
+    return bucket.openDownloadStream(fileId);
+  }
+
+  /**
+   * Get filename stored in GridFS for a given storage key.
+   */
+  static async getFilename(storageKey: string): Promise<string> {
+    const bucket = await getBucket();
+    const fileId = new ObjectId(storageKey);
+    const files = await bucket.find({ _id: fileId }).toArray();
+    if (!files.length) throw new Error(`File not found in GridFS: ${storageKey}`);
+    return files[0].filename;
+  }
+
+  /**
+   * Delete a file from GridFS.
+   */
+  static async deleteFile(storageKey: string): Promise<void> {
+    const bucket = await getBucket();
+    await bucket.delete(new ObjectId(storageKey));
+  }
+
+  /**
+   * Always configured since it uses the same MongoDB connection.
    */
   static isConfigured(): boolean {
-    return !!(
-      process.env.AWS_ACCESS_KEY_ID && 
-      process.env.AWS_SECRET_ACCESS_KEY && 
-      process.env.AWS_BUCKET_NAME
-    );
+    return !!process.env.DATABASE_URL;
   }
 }

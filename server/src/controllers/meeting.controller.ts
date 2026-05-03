@@ -14,29 +14,30 @@ export class MeetingController {
       let fileUrl = req.body.fileUrl;
       let storageKey: string | undefined;
 
-      // If a file was uploaded via multer
+      // If a file was uploaded via multer, store it in MongoDB GridFS
       if (req.file) {
-        const baseUrl = process.env.APP_URL || 'http://localhost:4000';
-        fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+        try {
+          const { StorageService } = await import('../services/storage.service');
+          console.log(`☁️ Uploading ${req.file.filename} to MongoDB GridFS...`);
+          storageKey = await StorageService.uploadFile(req.file.path, req.file.filename);
+          console.log(`✅ Stored in GridFS with key: ${storageKey}`);
 
-        // Attempt S3 upload if configured
-        const { StorageService } = await import('../services/storage.service');
-        if (StorageService.isConfigured()) {
-          try {
-            console.log(`☁️ Uploading ${req.file.filename} to S3...`);
-            storageKey = await StorageService.uploadFile(req.file.path, req.file.filename);
-            console.log(`Uploaded to S3: ${storageKey}`);
-            
-            // Optionally delete local file after S3 upload
-            // fs.unlinkSync(req.file.path); 
-          } catch (s3Error) {
-            console.error('S3 Upload failed, falling back to local storage:', s3Error);
+          // Build a stable internal reference URL (used as fallback)
+          const baseUrl = process.env.APP_URL || 'http://localhost:4000';
+          fileUrl = `${baseUrl}/api/meetings/file/${storageKey}`;
+
+          // Clean up local temp file after GridFS upload
+          if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
           }
+        } catch (gridfsError: any) {
+          console.error('GridFS upload failed:', gridfsError.message);
+          return res.status(500).json({ error: 'File storage failed' });
         }
       }
 
       if (!title || !workspaceId || !creatorId || !fileUrl) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ error: 'Missing required fields: title, workspaceId, creatorId, and a file or fileUrl' });
       }
 
       const meeting = await meetingRepository.create({
@@ -70,20 +71,32 @@ export class MeetingController {
         return res.status(404).json({ error: 'Meeting not found' });
       }
 
-      // If meeting has a storage key, generate a presigned URL
+      // If meeting has a GridFS storageKey, expose a direct download URL
       if (meeting.storageKey) {
-        const { StorageService } = await import('../services/storage.service');
-        try {
-          meeting.videoUrl = await StorageService.getPresignedUrl(meeting.storageKey);
-        } catch (s3Error) {
-          console.error('❌ Failed to generate presigned URL:', s3Error);
-        }
+        const baseUrl = process.env.APP_URL || 'http://localhost:4000';
+        meeting.videoUrl = `${baseUrl}/api/meetings/file/${meeting.storageKey}`;
       }
 
       res.json(meeting);
     } catch (error) {
       console.error('Get meeting error:', error);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  serveFile = async (req: Request, res: Response) => {
+    try {
+      const { storageKey } = req.params;
+      const { StorageService } = await import('../services/storage.service');
+      const filename = await StorageService.getFilename(storageKey);
+      const stream = await StorageService.getDownloadStream(storageKey);
+
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      stream.pipe(res);
+    } catch (error: any) {
+      console.error('File serve error:', error.message);
+      res.status(404).json({ error: 'File not found' });
     }
   }
 

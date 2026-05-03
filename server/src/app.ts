@@ -18,13 +18,15 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
+// Only create local uploads dir in development (production uses AWS S3)
+if (process.env.NODE_ENV !== 'production') {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+  }
+  app.use('/uploads', express.static(uploadsDir));
 }
 
-app.use('/uploads', express.static(uploadsDir));
 
 // Health check
 app.get('/health', (req, res) => {

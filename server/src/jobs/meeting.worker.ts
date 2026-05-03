@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../config/redis';
 import { MEETING_QUEUE_NAME } from '../services/queue.service';
@@ -19,12 +22,28 @@ if (redisConnection) {
   );
 
   meetingWorker.on('completed', (job) => {
-    console.log(`Job ${job.id} has completed!`);
+    console.log(`✅ Job ${job.id} completed`);
   });
 
   meetingWorker.on('failed', (job, err) => {
-    console.error(`Job ${job?.id} has failed with ${err.message}`);
+    console.error(`❌ Job ${job?.id} failed: ${err.message}`);
+  });
+
+  console.log('🚀 MeetingMind Worker started and listening for jobs...');
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received — closing worker...');
+    await meetingWorker?.close();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received — closing worker...');
+    await meetingWorker?.close();
+    process.exit(0);
   });
 } else {
-  console.log('[BullMQ] Redis unavailable. Background workers skipped.');
+  console.error('[Worker] Redis unavailable. Worker cannot start without Redis.');
+  process.exit(1);
 }

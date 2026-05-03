@@ -16,19 +16,10 @@ export class ProcessingService {
     try {
       let processingUrl = fileUrl;
 
-      // If we have an S3 key, generate a temporary presigned URL for the AI service
-      if (storageKey) {
-        const { StorageService } = await import('./storage.service');
-        if (StorageService.isConfigured()) {
-          console.log(`🔗 [${meetingId}] Generating presigned URL for transcription...`);
-          processingUrl = await StorageService.getPresignedUrl(storageKey);
-        }
-      }
-
-      // 1. Transcribe
+      // 1. Transcribe — pass storageKey so AI service fetches from GridFS directly
       console.log(`🔄 [${meetingId}] Step 1: Transcribing audio...`);
       await meetingRepository.updateStatus(meetingId, MeetingStatus.TRANSCRIBING);
-      const segments = await aiService.transcribe(processingUrl);
+      const segments = await aiService.transcribe(processingUrl, storageKey);
       
       if (!segments || segments.length === 0) {
         throw new Error('Transcription failed: No segments returned');

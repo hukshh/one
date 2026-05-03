@@ -1,79 +1,94 @@
 services:
-  # 1. API Service (Backend)
+  # ─────────────────────────────────────────────
+  # 1. API Service (Express Backend)
+  # ─────────────────────────────────────────────
   - type: web
     name: meetingmind-api
     env: node
+    region: oregon
     rootDir: server
-    buildCommand: npm install && npm run prisma:generate && npm run build
+    buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm run start
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 4000
+
+      # Database — MongoDB Atlas (also used for GridFS file storage)
       - key: DATABASE_URL
-        sync: false # User must provide this (MongoDB Atlas)
+        sync: false  # Set in Render dashboard
+
+      # Redis — auto-injected from the Redis instance below
       - key: REDIS_URL
         fromService:
           type: redis
           name: meetingmind-redis
           property: connectionString
-      - key: APP_URL
-        fromContext: instanceUrl
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
 
-  # 2. Worker Service (Background Jobs)
+      # AI Providers
+      - key: OPENAI_API_KEY
+        sync: false  # Set in Render dashboard
+      - key: GROQ_API_KEY
+        sync: false  # Set in Render dashboard
+
+      # Email (Resend SMTP)
+      - key: EMAIL_HOST
+        value: smtp.resend.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USER
+        value: resend
+      - key: EMAIL_PASS
+        sync: false  # Set in Render dashboard
+
+      # CORS — set to your Vercel URL after first deploy
+      - key: FRONTEND_URL
+        sync: false  # e.g. https://your-app.vercel.app
+
+      # Backend's own URL (used to build file download links)
+      - key: APP_URL
+        fromService:
+          type: web
+          name: meetingmind-api
+          property: host
+
+  # ─────────────────────────────────────────────
+  # 2. Worker Service (BullMQ Background Jobs)
+  # ─────────────────────────────────────────────
   - type: worker
     name: meetingmind-worker
     env: node
+    region: oregon
     rootDir: server
-    buildCommand: npm install && npm run prisma:generate && npm run build
+    buildCommand: npm install && npx prisma generate && npm run build
     startCommand: node dist/jobs/meeting.worker.js
     envVars:
       - key: NODE_ENV
         value: production
+
+      # Database — MongoDB Atlas (used for GridFS file access during processing)
       - key: DATABASE_URL
-        sync: false
+        sync: false  # Set in Render dashboard
+
+      # Redis — auto-injected
       - key: REDIS_URL
         fromService:
           type: redis
           name: meetingmind-redis
           property: connectionString
+
+      # AI Providers
       - key: OPENAI_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
 
-  # 3. Client Service (Frontend)
-  - type: web
-    name: meetingmind-client
-    env: node
-    rootDir: client
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: meetingmind-api
-          property: url
-        suffix: /api
-      - key: AUTH_URL
-        fromContext: instanceUrl
-      - key: AUTH_SECRET
-        generateValue: true
-      - key: AUTH_TRUST_HOST
-        value: "true"
-      - key: DATABASE_URL
-        sync: false # Required for NextAuth Prisma Adapter
-
-# 4. Redis instance for BullMQ
+# ─────────────────────────────────────────────
+# 3. Redis (BullMQ Broker)
+# ─────────────────────────────────────────────
 redis:
-  name: meetingmind-redis
-  plan: free
-  ipAllowList: [] # Only allow internal connections
+  - name: meetingmind-redis
+    plan: free
+    ipAllowList: []  # Internal access only

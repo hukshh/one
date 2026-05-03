@@ -1,8 +1,8 @@
 import { PROMPTS } from '../config/prompts';
 import { ZodSchema, z } from 'zod';
 import OpenAI from 'openai';
-import fs from 'fs';
 import path from 'path';
+
 
 export interface MeetingIntelligence {
   summary_short: string;
@@ -102,37 +102,36 @@ export class AIService {
     }
   }
 
-  async transcribe(fileUrl: string): Promise<any[]> {
-    console.log(`Transcribing audio from: ${fileUrl}...`);
+  async transcribe(fileUrl: string, storageKey?: string): Promise<any[]> {
+    console.log(`🎙️ Transcribing audio...`);
     
     try {
-      let fileStream: any;
+      let fileInput: any;
       let filename = 'meeting.mp4';
-      const baseUrl = process.env.APP_URL || 'http://localhost:4000';
 
-      if (fileUrl.startsWith(`${baseUrl}/uploads/`)) {
-        // Optimization: Use local file system if it's a local upload
-        const localFilename = fileUrl.split('/').pop()!;
-        const localPath = path.join(process.cwd(), 'uploads', localFilename);
-        console.log(`Using local file stream: ${localPath}`);
-        
-        if (!fs.existsSync(localPath)) {
-          throw new Error(`File not found at ${localPath}`);
-        }
-        
-        fileStream = fs.createReadStream(localPath);
-        filename = localFilename;
-      } else {
-        // Fallback for remote URLs
+      if (storageKey) {
+        // Primary path: download from MongoDB GridFS
+        console.log(`📦 Fetching file from GridFS (key: ${storageKey})...`);
+        const { StorageService } = await import('./storage.service');
+        filename = await StorageService.getFilename(storageKey);
+        const buffer = await StorageService.downloadFile(storageKey);
+        fileInput = await OpenAI.toFile(buffer, filename);
+        console.log(`✅ File loaded from GridFS: ${filename} (${buffer.length} bytes)`);
+      } else if (fileUrl) {
+        // Fallback: download from URL
+        console.log(`🌐 Fetching file from URL: ${fileUrl}`);
         const response = await fetch(fileUrl);
         if (!response.ok) throw new Error(`Failed to fetch remote file: ${response.statusText}`);
         const buffer = Buffer.from(await response.arrayBuffer());
-        fileStream = await OpenAI.toFile(buffer, path.basename(fileUrl) || 'meeting.mp4');
+        filename = path.basename(new URL(fileUrl).pathname) || 'meeting.mp4';
+        fileInput = await OpenAI.toFile(buffer, filename);
+      } else {
+        throw new Error('No storageKey or fileUrl provided for transcription');
       }
-      
+
       const transcription = await this.openai.audio.transcriptions.create({
-        file: fileStream,
-        model: 'whisper-large-v3', // Groq's high-speed whisper model
+        file: fileInput,
+        model: 'whisper-large-v3',
         response_format: 'verbose_json',
       });
 
@@ -151,10 +150,11 @@ export class AIService {
         confidence: s.confidence || 0.9,
       }));
     } catch (error: any) {
-      console.error('Whisper API Error Details:', error?.response?.data || error.message || error);
+      console.error('Whisper API Error:', error?.response?.data || error.message || error);
       throw new Error(`Transcription failed: ${error.message}`);
     }
   }
+
 
   private chunkSchema = z.object({
     summary_detailed: z.string(),

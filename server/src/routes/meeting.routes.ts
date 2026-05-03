@@ -1,25 +1,30 @@
 import { Router } from 'express';
 import { meetingController } from '../controllers/meeting.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
-
 import multer from 'multer';
 import path from 'path';
+import os from 'os';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  },
+// Use OS temp directory — files are uploaded to GridFS immediately and temp files are deleted
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, os.tmpdir()); // Use system temp dir — no local uploads/ needed
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    },
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max
 });
-
-const upload = multer({ storage });
 
 const router = Router();
 
-// Secure all meeting routes
+// Public file serving route — no auth required so the worker can download files
+router.get('/file/:storageKey', meetingController.serveFile);
+
+// All other meeting routes require authentication
 router.use(authMiddleware);
 
 router.post('/upload', upload.single('file'), meetingController.upload);
